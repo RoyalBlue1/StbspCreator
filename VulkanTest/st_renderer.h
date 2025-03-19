@@ -40,6 +40,9 @@ namespace st {
 		void endFrame();
 		void beginSwapChainRenderpass(VkCommandBuffer commandBuffer);
 		void endSwapChainRenderpass(VkCommandBuffer commandBuffer);
+		VkDescriptorImageInfo* binDescriptorInfo(int index) {
+			return stSwapChain->binDescriptorInfo(index);
+		}
 	private:
 
 

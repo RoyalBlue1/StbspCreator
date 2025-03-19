@@ -110,9 +110,18 @@ namespace st {
 		renderPassInfo.framebuffer = stSwapChain->getFrameBuffer(currentImageIndex);
 		renderPassInfo.renderArea.offset = {0, 0};
 		renderPassInfo.renderArea.extent = stSwapChain->getSwapChainExtent();
-		std::array<VkClearValue, 2> clearValues{};
+		std::array<VkClearValue, 3> clearValues{};
 		clearValues[0].color = {0.1f, 0.1f, 0.1f, 1.0f};
-		clearValues[1].depthStencil = {1.0f, 0};
+		clearValues[1].color.int32[0] = -1;
+		clearValues[1].color.int32[1] = -1;
+		clearValues[1].color.int32[2] = -1;
+		clearValues[1].color.int32[3] = -1;
+		//clearValues[2].color.int32[0] = -1;
+		//clearValues[2].color.int32[1] = -1;
+		//clearValues[2].color.int32[2] = -1;
+		//clearValues[2].color.int32[3] = -1;
+		clearValues[2].depthStencil = {1.0f, 0};
+
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -136,3 +145,4 @@ namespace st {
 		vkCmdEndRenderPass(commandBuffer);
 	}
 }
+

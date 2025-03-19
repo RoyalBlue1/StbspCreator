@@ -34,6 +34,9 @@ namespace st {
             return swapChain.swapChainDepthFormat == swapChainDepthFormat &&
                    swapChain.swapChainImageFormat == swapChainImageFormat;
         }
+        VkDescriptorImageInfo* binDescriptorInfo(int index) {
+            return &binBindDescriptorInfo[index];
+        }
     private:
         void init();
         void createSwapChain();
@@ -58,6 +61,14 @@ namespace st {
         std::vector<VkImageView> depthImageViews;
         std::vector<VkImage> swapChainImages;
         std::vector<VkImageView> swapChainImageViews;
+        std::vector<VkImage> binSwapChainImages;
+        std::vector<VkImageView> binSwapChainImageViews;
+        std::vector<VkDeviceMemory> binSwapChainImageMemory;
+        VkSampler binSampler;
+        std::vector<VkDescriptorImageInfo> binBindDescriptorInfo;
+        //std::vector<VkImage> texIdSwapChainImages;
+        //std::vector<VkImageView> texIdSwapChainImageViews;
+        //std::vector<VkDeviceMemory> texIdSwapChainImageMemory;
 
         StDevice &device;
         VkExtent2D windowExtent;

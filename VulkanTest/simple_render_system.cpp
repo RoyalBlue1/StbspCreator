@@ -1,4 +1,5 @@
 #include "simple_render_system.h"
+#include "st_material_management.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -8,35 +9,38 @@ namespace st {
 
 	struct SimplePushConstantData {
 		glm::mat4 transform{ 1.0f };
-		glm::mat4 modelMatrix{ 1.0f };
+		uint32_t materialCount;
 	};
 
 
-	SimpleRenderSystem::SimpleRenderSystem(StDevice& device, VkRenderPass renderPass) :stDevice{ device } {
+	SimpleRenderSystem::SimpleRenderSystem(StDevice& device, VkRenderPass renderPass,VkDescriptorSetLayout globalSetLayout) :stDevice{ device } {
 
-		createPipelineLayout();
+		createPipelineLayout(globalSetLayout);
 		createPipeline(renderPass);
 	}
 	SimpleRenderSystem::~SimpleRenderSystem() {
-		vkDestroyPipelineLayout(stDevice.device(),pipelineLayout,nullptr);
+		vkDestroyPipelineLayout(stDevice.device(),graphicPipelineLayout,nullptr);
 	}
 
 	
-	void SimpleRenderSystem::createPipelineLayout() {
+	void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
 
 		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 		pushConstantRange.offset = 0;
 		pushConstantRange.size = sizeof(SimplePushConstantData);
 
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts{globalSetLayout};
+
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0;
-		pipelineLayoutInfo.pSetLayouts = nullptr;
+		pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+		pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-		if (vkCreatePipelineLayout(stDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+		if (vkCreatePipelineLayout(stDevice.device(), &pipelineLayoutInfo, nullptr, &graphicPipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("couldn't create pipeline layout");
 		}
 	}
@@ -45,33 +49,63 @@ namespace st {
 		PipelineConfigInfo pipelineConfig;
 		StPipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
-		pipelineConfig.pipelineLayout = pipelineLayout;
-		stPipeline = std::make_unique<StPipeline>(stDevice, "simple_shader.vert.spv","simple_shader.frag.spv",pipelineConfig);
+		pipelineConfig.pipelineLayout = graphicPipelineLayout;
+		stPipeline = std::make_unique<StPipeline>(stDevice, "simple_shader.vert.spv","simple_shader.frag.spv","histogram.comp.spv", pipelineConfig);
 	}
 
 
 
 
 
-	void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer,std::vector<StGameObject>& gameObjects,const StCamera& camera) {
-		stPipeline->bind(commandBuffer);
-		auto projectionView = camera.getProjection() *camera.getView();
+	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo,std::vector<StGameObject>& gameObjects) {
+		stPipeline->bindGraphics(frameInfo.commandBuffer);
+		auto projectionView =frameInfo.camera.getProjection() * frameInfo.camera.getView();
+		
+		//vkCmdBindDescriptorSets(
+		//	frameInfo.commandBuffer,
+		//	VK_PIPELINE_BIND_POINT_GRAPHICS,
+		//	graphicPipelineLayout,
+		//	0,
+		//	1,
+		//	&frameInfo.globalDescriptorSet,
+		//	0,
+		//	nullptr
+		//);
+		
+		
+		
 		for (auto& obj : gameObjects) {
 
 			SimplePushConstantData push{};		
 			push.transform = projectionView * obj.transform3d.mat4();
-			push.modelMatrix = obj.transform3d.normalMatrix();
+			push.materialCount = StMaterialManager::getManager().getMaterialCount();
+			
 			vkCmdPushConstants(
-				commandBuffer,
-				pipelineLayout,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				frameInfo.commandBuffer,
+				graphicPipelineLayout,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
 				0,
 				sizeof(SimplePushConstantData),
 				&push);
-			obj.model->bind(commandBuffer);
-			obj.model->draw(commandBuffer);
+			obj.model->bind(frameInfo.commandBuffer);
+			obj.model->draw(frameInfo.commandBuffer);
 		}
+
+		
 	}
-
-
+	void SimpleRenderSystem::computeHistogram(VkCommandBuffer& commandBuffer,uint32_t windowX, uint32_t windowY,VkDescriptorSet* descriptorSet) {
+		stPipeline->bindCompute(commandBuffer);
+		vkCmdBindDescriptorSets(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_COMPUTE,
+			graphicPipelineLayout,
+			0,
+			1,
+			descriptorSet,
+			0,
+			nullptr
+		);
+		vkCmdDispatch(commandBuffer,windowX/16,windowY/16,1);
+	}
+	
 }
