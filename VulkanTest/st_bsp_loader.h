@@ -16,7 +16,13 @@
 
 namespace st {
 
-    
+	typedef glm::vec2 Vector2D;
+	typedef glm::vec3 Vector;
+	typedef glm::vec4 Vector4D;
+
+	typedef glm::vec3 Vector3;
+
+
 	struct LumpHeader {
 		uint32_t offset;
 		uint32_t length;
@@ -106,14 +112,35 @@ namespace st {
 		int flags;
 	};
 
+	struct StaticProp
+	{
+		Vector3 m_Origin;
+		Vector3 m_Angles;
+		float scale;
+		uint16_t modelIndex;
+		BYTE m_Solid;
+		BYTE m_flags;
+		WORD skin;
+		WORD word_22;
+		float forced_fade_scale;
+		Vector3 m_LightingOrigin;
+		uint8_t m_DiffuseModulation_r;
+		uint8_t m_DiffuseModulation_g;
+		uint8_t m_DiffuseModulation_b;
+		uint8_t m_DiffuseModulation_a;
+		int unk;
+		DWORD collision_flags_remove;
+	};
+
 	class BspLoader {
     public:
-		struct Mesh {
-			std::vector<Vertex> verts;
-			std::vector<uint32_t> indices;
-			std::string material;
-		};
-
+		
+		BspLoader(const char* fileName, bool multipleMeshes = false) {
+			if(multipleMeshes)
+				loadFileMultipleMeshes(fileName);
+			else
+				loadFileSingleMesh(fileName);
+		}
 
 
 

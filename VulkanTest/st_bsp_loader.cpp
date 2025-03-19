@@ -1,20 +1,13 @@
 #include "st_bsp_loader.h"
+#include "st_mdl_loader.h"
 #include "st_utils.h"
 #include <unordered_map>
+#include "st_material_management.h"
+#include "st_game_object.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-namespace std {
-	template <>
-	struct hash<st::Vertex> {
-		size_t operator()(st::Vertex const &vertex) const {
-			size_t seed = 0;
-			st::hashCombine(seed, vertex.position, vertex.color, vertex.normal, vertex.uv,vertex.textureHash);
-			return seed;
-		}
-	};
-} 
 
 namespace st {
 
@@ -59,14 +52,15 @@ namespace st {
 		
 		for (auto& bspMesh : bspMeshes) {
 
-			if(bspMesh.meshFlags&0x20000)continue;
+			if(bspMesh.meshFlags&0x60000)continue;
 			std::unordered_map<Vertex,size_t> vertBuildList;
 			Mesh loadedMesh;
 			uint32_t vertexOffset = materialSorts[bspMesh.material_sort].vertexOffset;
 			uint32_t vertexOffset2 = bspMesh.first_vertex;
-			uint32_t materialId = materialSorts[bspMesh.material_sort].textureData;
-			auto& texture = textureData[materialId];
-			loadedMesh.material = std::string(&textureStringData[textureStringTable[texture.nameStringId]]);
+			uint32_t materialBspId = materialSorts[bspMesh.material_sort].textureData;
+			auto& texture = textureData[materialBspId];
+			std::string materialName = std::string(&textureStringData[textureStringTable[texture.nameStringId]]);
+			uint32_t material = StMaterialManager::getManager().addMaterial(materialName);
 			for (int j = 0; j < bspMesh.num_triangles * 3; j++) {
 
 
@@ -78,39 +72,43 @@ namespace st {
 				{
 					auto& vert = vertex_lit_flat[vertexIndex];
 					v.position = vertices[vert.vertexIndex];
-					v.normal = normals[vert.normalIndex];
-					v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
-					v.uv = vert.albedoUv;
+					//v.normal = normals[vert.normalIndex];
+					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
+					//v.uv = vert.albedoUv;
 				}
 					break;
 				case 1:
 				{
 					auto& vert = vertex_lit_bump[vertexIndex];
 					v.position = vertices[vert.vertexIndex];
-					v.normal = normals[vert.normalIndex];
-					v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
-					v.uv = vert.albedoUv;
+					//v.normal = normals[vert.normalIndex];
+					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
+					//v.uv = vert.albedoUv;
 				}
 					break;
 				case 2:
 				{
 					auto& vert = vertex_unlit[vertexIndex];
 					v.position = vertices[vert.vertexIndex];
-					v.normal = normals[vert.normalIndex];
-					v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
-					v.uv = vert.albedoUv;
+					//v.normal = normals[vert.normalIndex];
+					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
+					//v.uv = vert.albedoUv;
 				}
 					break;
 				case 3:
 				{
 					auto& vert = vertex_unlit_ts[vertexIndex];
 					v.position = vertices[vert.vertexIndex];
-					v.normal = normals[vert.normalIndex];
-					v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
-					v.uv = vert.albedoUv;
+					//v.normal = normals[vert.normalIndex];
+					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
+					//v.uv = vert.albedoUv;
 				}
 					break;
 				}
+				std::hash<std::string> strHasher;
+				uint32_t materialHash = strHasher(materialName);
+				v.textureColor = {((materialHash) & 0xFF) / 255.0,((materialHash >> 8) & 0xFF) / 255.0,((materialHash >> 16) & 0xFF) / 255.0 }; 
+				v.materialId = material;
 				size_t index;
 				if (vertBuildList.contains(v)) {
 					index = vertBuildList[v];
@@ -126,6 +124,8 @@ namespace st {
 			//printf("mesh type %d mesh vert count %d vert offset %d\n",(mesh.meshFlags >> 9) & 3,mesh.num_vertices,vertexOffset);
 			//printf("mesh offset %d first vertex %d\n",vertexOffset,vertexOffset2);
 			
+
+
 			//uint32_t off = materialSorts[mesh.material_sort].vertexOffset+offsets[(mesh.meshFlags>>9)&3];
 			loadedMesh.verts.resize(vertBuildList.size());
 			for (auto& p : vertBuildList) {
@@ -137,6 +137,47 @@ namespace st {
 
 		
 	}
+
+	void AngleMatrix( const Vector3 &angles,const Vector3& position,float scale, matrix3x4_t& matrix)
+	{
+
+
+		float sr, sp, sy, cr, cp, cy;
+
+
+		sy = sin(angles.y*(180.f/glm::pi<float>()));
+		sp = sin(angles.x*(180.f/glm::pi<float>()));
+		sr = sin(angles.z*(180.f/glm::pi<float>()));
+		cy = cos(angles.y*(180.f/glm::pi<float>()));
+		cp = cos(angles.x*(180.f/glm::pi<float>()));
+		cr = cos(angles.z*(180.f/glm::pi<float>()));
+
+
+		// matrix = (YAW * PITCH) * ROLL
+		matrix.m[0][0] = cp*cy*scale;
+		matrix.m[1][0] = cp*sy*scale;
+		matrix.m[2][0] = -sp*scale;
+
+		float crcy = cr*cy;
+		float crsy = cr*sy;
+		float srcy = sr*cy;
+		float srsy = sr*sy;
+
+		matrix.m[0][1] = (sp*srcy-crsy)*scale;
+		matrix.m[1][1] = (sp*srsy+crcy)*scale;
+		matrix.m[2][1] = (sr*cp)*scale;
+
+		matrix.m[0][2] = (sp*crcy+srsy)*scale;
+		matrix.m[1][2] = (sp*crsy-srcy)*scale;
+		matrix.m[2][2] = (cr*cp)*scale;
+
+		matrix.m[0][3] = position.x;
+		matrix.m[1][3] = position.y;
+		matrix.m[2][3] = position.z;
+	}
+
+
+
 	void BspLoader::loadFileSingleMesh(const char* fileName) {
 
 
@@ -162,19 +203,22 @@ namespace st {
 		std::vector<char> textureStringData = loadLump<char>(0x2B);
 		std::vector<TextureData> textureData = loadLump<TextureData>(0x2);
 		
+		std::vector<char> gameLump = loadLump<char>(35);
+
 		std::unordered_map<Vertex,size_t> vertBuildList;
 		Mesh loadedMesh;
 		for (auto& bspMesh : bspMeshes) {
 
-			if(bspMesh.meshFlags&0x20000)continue;
+			if(bspMesh.meshFlags&0x60000)continue;
+
 			
 			
 			uint32_t vertexOffset = materialSorts[bspMesh.material_sort].vertexOffset;
 			uint32_t vertexOffset2 = bspMesh.first_vertex;
-			uint32_t materialId = materialSorts[bspMesh.material_sort].textureData;
-			auto& texture = textureData[materialId];
-			loadedMesh.material = "";
-			std::string material = std::string(&textureStringData[textureStringTable[texture.nameStringId]]);
+			uint32_t materialBspId = materialSorts[bspMesh.material_sort].textureData;
+			auto& texture = textureData[materialBspId];
+			std::string materialName = std::string(&textureStringData[textureStringTable[texture.nameStringId]]);
+			uint32_t materialId = StMaterialManager::getManager().addMaterial(materialName);
 			for (int j = 0; j < bspMesh.num_triangles * 3; j++) {
 
 
@@ -186,8 +230,8 @@ namespace st {
 				{
 					auto& vert = vertex_lit_flat[vertexIndex];
 					v.position = vertices[vert.vertexIndex];
-					v.normal = normals[vert.normalIndex];
-					v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
+					//v.normal = normals[vert.normalIndex];
+					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
 					v.uv = vert.albedoUv;
 				}
 				break;
@@ -195,8 +239,8 @@ namespace st {
 				{
 					auto& vert = vertex_lit_bump[vertexIndex];
 					v.position = vertices[vert.vertexIndex];
-					v.normal = normals[vert.normalIndex];
-					v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
+					//v.normal = normals[vert.normalIndex];
+					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
 					v.uv = vert.albedoUv;
 				}
 				break;
@@ -204,8 +248,8 @@ namespace st {
 				{
 					auto& vert = vertex_unlit[vertexIndex];
 					v.position = vertices[vert.vertexIndex];
-					v.normal = normals[vert.normalIndex];
-					v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
+					//v.normal = normals[vert.normalIndex];
+					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
 					v.uv = vert.albedoUv;
 				}
 				break;
@@ -213,15 +257,16 @@ namespace st {
 				{
 					auto& vert = vertex_unlit_ts[vertexIndex];
 					v.position = vertices[vert.vertexIndex];
-					v.normal = normals[vert.normalIndex];
-					v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
+					//v.normal = normals[vert.normalIndex];
+					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
 					v.uv = vert.albedoUv;
 				}
 				break;
 				}
 				std::hash<std::string> strHasher;
-				v.textureHash = strHasher(material);
-				v.textureColor = {((v.textureHash) & 0xFF) / 255.0,((v.textureHash >> 8) & 0xFF) / 255.0,((v.textureHash >> 16) & 0xFF) / 255.0 }; 
+				uint32_t materialHash = strHasher(materialName);
+				v.textureColor = {((materialHash) & 0xFF) / 255.0,((materialHash >> 8) & 0xFF) / 255.0,((materialHash >> 16) & 0xFF) / 255.0 }; 
+				v.materialId = materialId;
 				size_t index;
 				if (vertBuildList.contains(v)) {
 					index = vertBuildList[v];
@@ -230,7 +275,7 @@ namespace st {
 					index = vertBuildList.size();
 					vertBuildList.emplace(v,index);
 				}
-				loadedMesh.indices.push_back((uint32_t)index);
+				loadedMesh.addVert(v);
 
 
 			}
@@ -241,13 +286,84 @@ namespace st {
 			
 
 		}
-		loadedMesh.verts.resize(vertBuildList.size());
-		for (auto& p : vertBuildList) {
-			loadedMesh.verts[p.second] = p.first;
+		
+		size_t readPtr = 20;
+		int modelNameCount,leafCount,propCount;
+		modelNameCount = *(int*)&gameLump[readPtr];
+		readPtr+=4;
+		std::vector<MdlLoader> mdls;
+		for (int i = 0; i < modelNameCount; i++) {
+			char mdlName[129];
+			strncpy(mdlName,&gameLump[readPtr],128);
+			mdlName[128] = 0;
+			readPtr+=128;
+			mdls.emplace_back((std::string("H:\\r2\\r2_vpk\\")+mdlName).c_str());
 		}
-		meshes.push_back(loadedMesh);
+		//skip leafData
+		//leafCount = *(int*)&gameLump[readPtr];
+		readPtr += 8;
+		propCount = *(int*)&gameLump[readPtr];
+		readPtr+=4;
+		for (int i = 0; i < propCount; i++) {
 
+			if((i%10)==0)printf("%d/%d props\n",i,propCount);
+			StaticProp prop;
+			memcpy(&prop, &gameLump[readPtr], sizeof(prop));
+			readPtr += sizeof(prop);
+			//Transform3dComponent transform;
+			//transform.scale = glm::vec3(prop.scale);
+			//transform.translation = prop.m_Origin;
+			//transform.rotation= glm::vec3{glm::pi<float>() *prop.m_Angles.x /180.0f,glm::pi<float>() *prop.m_Angles.z /180.0f,glm::pi<float>() *prop.m_Angles.y /180.0f};
+			//glm::mat4x4 mat = transform.mat4();
+			float sy = sin(prop.m_Angles.y*(glm::pi<float>()/180.f));
+			float sp = sin(prop.m_Angles.x*(glm::pi<float>()/180.f));
+			float sr = sin(prop.m_Angles.z*(glm::pi<float>()/180.f));
+			float cy = cos(prop.m_Angles.y*(glm::pi<float>()/180.f));
+			float cp = cos(prop.m_Angles.x*(glm::pi<float>()/180.f));
+			float cr = cos(prop.m_Angles.z*(glm::pi<float>()/180.f));
+			glm::mat4 mat = {
+				{
+					cp*cy*prop.scale,
+					cp*sy*prop.scale,
+					-1*sp*prop.scale,
+					0.0f
+				},
+				{
+					(sp*sr*cy-cr*sy)*prop.scale,
+					(sp*sr*sy+cr*cy)*prop.scale,
+					sr*cp*prop.scale,
+					0.0f
+				},
+				{
+					(sp*cr*cy+sr*sy)*prop.scale,
+					(sp*cr*sy-sr*cy)*prop.scale,
+					cr*cp*prop.scale,
+					0.0f
+				},
+				{
+					prop.m_Origin.x,
+					prop.m_Origin.y,
+					prop.m_Origin.z,
+					0.0f
+}
 
+			};
+			//AngleMatrix(prop.m_Angles,prop.m_Origin,prop.scale,mat);
+
+			MdlLoader& mdl = mdls[prop.modelIndex];
+			if(mdl.meshes.size()==0)continue;
+			for (int i : mdl.meshes[0].indices) {
+				Vertex v = mdl.meshes[0].verts[i];
+				v.position = mat*glm::vec4(v.position,1);
+				
+				loadedMesh.addVert(v);
+			}
+		}
+
+		loadedMesh.finishMesh();
+		
+		spdlog::info("vertCount {} triCount {}",loadedMesh.verts.size(),loadedMesh.indices.size()/3);
+		meshes.push_back(loadedMesh);	
 	}
-
+	
 };

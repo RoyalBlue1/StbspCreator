@@ -2,50 +2,40 @@
 
 namespace st {
 
-	StModel::StModel(StDevice& device, const StModel::Builder& builder) :stDevice{ device } {
-		createVertexBuffers(builder.vertices);
+	StModel::StModel(StDevice& device, const Mesh& builder) :stDevice{ device } {
+		createVertexBuffers(builder.verts);
 
 		createIndexBuffers(builder.indices);
 
 	}
-	StModel::~StModel() {
-		vkDestroyBuffer(stDevice.device(),vertexBuffer,nullptr);
-		vkFreeMemory(stDevice.device(),vertexBufferMemory,nullptr);
-
-		if (hasIndexBuffer) {
-			vkDestroyBuffer(stDevice.device(),indexBuffer,nullptr);
-			vkFreeMemory(stDevice.device(),indexBufferMemory,nullptr);
-		}
-	}
+	StModel::~StModel() {	}
 
 	void StModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
 		vertexCount = static_cast<uint32_t>(vertices.size());
 		assert(vertexCount >= 3 && "vertexCount needs to be at least 3");
 		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+		uint32_t vertexSize = sizeof(vertices[0]);
+	
 
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-		stDevice.createBuffer(
-			bufferSize,
+		StBuffer stagingBuffer{
+			stDevice,
+			vertexSize,
+			vertexCount,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferMemory);
+		};
 
-		void* data;
-		vkMapMemory(stDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-		memcpy(data, vertices.data(), bufferSize);
-		vkUnmapMemory(stDevice.device(), stagingBufferMemory);
+		stagingBuffer.map();
+		stagingBuffer.writeToBuffer((void *)vertices.data());
 
-		stDevice.createBuffer(
-			bufferSize,
+		vertexBuffer = std::make_unique<StBuffer>(
+			stDevice,
+			vertexSize,
+			vertexCount,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			vertexBuffer,
-			vertexBufferMemory);
-		stDevice.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-		vkDestroyBuffer(stDevice.device(), stagingBuffer,nullptr);
-		vkFreeMemory(stDevice.device(), stagingBufferMemory,nullptr);
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		stDevice.copyBuffer(stagingBuffer.getBuffer(),vertexBuffer->getBuffer(),bufferSize);
 	}
 	void StModel::createIndexBuffers(const std::vector<uint32_t>& indices) {
 		indexCount = static_cast<uint32_t>(indices.size());
@@ -54,37 +44,35 @@ namespace st {
 		hasIndexBuffer = true;
 		VkDeviceSize bufferSize = sizeof(indices[0])*indices.size();
 
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
-		stDevice.createBuffer(
-			bufferSize,
+		uint32_t indexSize = sizeof(indices[0]);
+
+		StBuffer stagingBuffer{
+			stDevice,
+			indexSize,
+			indexCount,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferMemory);
+		};
 
-		void* data;
-		vkMapMemory(stDevice.device(),stagingBufferMemory,0,bufferSize,0,&data);
-		memcpy(data,indices.data(),bufferSize);
-		vkUnmapMemory(stDevice.device(),stagingBufferMemory);
+		stagingBuffer.map();
+		stagingBuffer.writeToBuffer((void *)indices.data());
 
-		stDevice.createBuffer(
-			bufferSize,
+		indexBuffer = std::make_unique<StBuffer>(
+			stDevice,
+			indexSize,
+			indexCount,
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			indexBuffer,
-			indexBufferMemory);
-		stDevice.copyBuffer(stagingBuffer,indexBuffer,bufferSize);
-		vkDestroyBuffer(stDevice.device(),stagingBuffer,nullptr);
-		vkFreeMemory(stDevice.device(),stagingBufferMemory,nullptr);
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		stDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 	}
 
 	void StModel::bind(VkCommandBuffer commandBuffer) {
-		VkBuffer buffers[] = {vertexBuffer};
+		VkBuffer buffers[] = {vertexBuffer->getBuffer()};
 		VkDeviceSize offsets[] = {0};
 		vkCmdBindVertexBuffers(commandBuffer,0,1,buffers,offsets);
 		if (hasIndexBuffer) {
-			vkCmdBindIndexBuffer(commandBuffer,indexBuffer,0,VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(commandBuffer,indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		}
 	}
 
@@ -106,39 +94,41 @@ namespace st {
 		return bindingDescriptions;
 	}
 	std::vector<VkVertexInputAttributeDescription> Vertex::getAttributeDescriptions() {
-		std::vector<VkVertexInputAttributeDescription> attributeDescriptions(6);
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 		size_t i = 0;
-		attributeDescriptions[i].binding = 0;
-		attributeDescriptions[i].location = (uint32_t)i;
-		attributeDescriptions[i].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[i].offset = offsetof(Vertex,position);
-		i++;
-		attributeDescriptions[i].binding = 0;
-		attributeDescriptions[i].location = (uint32_t)i;
-		attributeDescriptions[i].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[i].offset = offsetof(Vertex,normal);
-		i++;
-		attributeDescriptions[i].binding = 0;
-		attributeDescriptions[i].location = (uint32_t)i;
-		attributeDescriptions[i].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[i].offset = offsetof(Vertex,color);
-		i++;
-		attributeDescriptions[i].binding = 0;
-		attributeDescriptions[i].location = (uint32_t)i;
-		attributeDescriptions[i].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[i].offset = offsetof(Vertex,textureColor);
-		i++;
-		attributeDescriptions[i].binding = 0;
-		attributeDescriptions[i].location = (uint32_t)i;
-		attributeDescriptions[i].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[i].offset = offsetof(Vertex,uv);
-		i++;
-		attributeDescriptions[i].binding = 0;
-		attributeDescriptions[i].location = (uint32_t)i;
-		attributeDescriptions[i].format = VK_FORMAT_R32_UINT;
-		attributeDescriptions[i].offset = offsetof(Vertex,textureHash);
-		i++;
+		VkVertexInputAttributeDescription desc;
+		desc.binding = 0;
+		desc.location = (uint32_t)attributeDescriptions.size();
+		desc.format = VK_FORMAT_R32G32B32_SFLOAT;
+		desc.offset = offsetof(Vertex,position);
+		attributeDescriptions.push_back(desc);
+		//desc.binding = 0;
+		//desc.location = (uint32_t)attributeDescriptions.size();
+		//desc.format = VK_FORMAT_R32G32B32_SFLOAT;
+		//desc.offset = offsetof(Vertex,normal);
+		//attributeDescriptions.push_back(desc);
+		//desc.binding = 0;
+		//desc.location = (uint32_t)attributeDescriptions.size();
+		//desc.format = VK_FORMAT_R32G32B32_SFLOAT;
+		//desc.offset = offsetof(Vertex,color);
+		//attributeDescriptions.push_back(desc);
+		desc.binding = 0;
+		desc.location = (uint32_t)attributeDescriptions.size();
+		desc.format = VK_FORMAT_R32G32B32_SFLOAT;
+		desc.offset = offsetof(Vertex,textureColor);
+		attributeDescriptions.push_back(desc);
+		desc.binding = 0;
+		desc.location = (uint32_t)attributeDescriptions.size();
+		desc.format = VK_FORMAT_R32G32_SFLOAT;
+		desc.offset = offsetof(Vertex,uv);
+		attributeDescriptions.push_back(desc);
+		desc.binding = 0;
+		desc.location = (uint32_t)attributeDescriptions.size();
+		desc.format = VK_FORMAT_R32_UINT;
+		desc.offset = offsetof(Vertex,materialId);
+		attributeDescriptions.push_back(desc);
 
 		return attributeDescriptions;
 	}
 }
+
