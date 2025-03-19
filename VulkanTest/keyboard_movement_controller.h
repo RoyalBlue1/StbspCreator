@@ -12,7 +12,7 @@ namespace st {
             int moveForward = GLFW_KEY_W;
             int moveBackward = GLFW_KEY_S;
             int moveUp = GLFW_KEY_E;
-            int moveDown = GLFW_KEY_Q;
+            int moveDown = GLFW_KEY_C;
             int lookLeft = GLFW_KEY_LEFT;
             int lookRight = GLFW_KEY_RIGHT;
             int lookUp = GLFW_KEY_UP;
@@ -20,7 +20,7 @@ namespace st {
         };
         void moveInPlaneXZ(GLFWwindow* window, float dt, StGameObject& gameObject);
         KeyMappings keys{};
-        float moveSpeed{3.f};
-        float lookSpeed{1.5f};
+        float moveSpeed{50.f};
+        float lookSpeed{2.f};
     };
 }  // namespace lve
