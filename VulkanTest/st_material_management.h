@@ -34,7 +34,7 @@ namespace st {
 
 
 			materials.push_back(StMaterial{ name,lastIndex });
-			spdlog::info("mat {}",lastIndex);
+			spdlog::info("mat {} {}",lastIndex,name);
 			return lastIndex++;
 		}
 

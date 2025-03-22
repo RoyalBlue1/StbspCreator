@@ -4,6 +4,7 @@
 #include "st_buffer.h"
 #include "st_utils.h"
 
+#define GLM_FORCE_SSE2
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -13,6 +14,7 @@
 
 #include <vector>
 #include <memory>
+#include <intrin.h>
 
 namespace st {
 	struct Vertex {
@@ -50,12 +52,28 @@ namespace st {
 
 
 	struct Mesh {
-
+		struct Extends {
+			float xMin;
+			float xMax;
+			float yMin;
+			float yMax;
+		};
 		std::vector<Vertex> verts;
 		std::vector<uint32_t> indices;
+		std::vector<__m128> mathVerts;
 		std::unordered_map<Vertex,size_t> vertBuildList;
+		Extends extends{
+			std::numeric_limits<float>::max(),
+			-std::numeric_limits<float>::max(),
+			std::numeric_limits<float>::max(),
+			-std::numeric_limits<float>::max()
+		};
 		void addVert(Vertex&v){
 			size_t index;
+			extends.xMax=fmax(extends.xMax,v.position.x);
+			extends.xMin=fmin(extends.xMin,v.position.x);
+			extends.yMax=fmax(extends.yMax,v.position.y);
+			extends.yMin=fmin(extends.yMin,v.position.y);
 			if (vertBuildList.contains(v)) {
 				index = vertBuildList[v];
 			}
@@ -67,8 +85,10 @@ namespace st {
 		}
 		void finishMesh() {
 			verts.resize(vertBuildList.size());
+			mathVerts.resize(vertBuildList.size());
 			for (auto& p : vertBuildList) {
 				verts[p.second] = p.first;
+				mathVerts[p.second] = _mm_set_ps(0.0f,p.first.position.z,p.first.position.y,p.first.position.x);
 			}
 			vertBuildList.clear();
 		}

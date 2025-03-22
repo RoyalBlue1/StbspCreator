@@ -1,6 +1,7 @@
 #include "simple_render_system.h"
 #include "st_material_management.h"
 
+#define GLM_FORCE_SSE2
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>

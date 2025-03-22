@@ -10,6 +10,17 @@
 #include "st_descriptors.h"
 #include <memory>
 
+struct Cell {
+	float xMin;
+	float xMax;
+	float yMin;
+	float yMax;
+	int xIndex;
+	int yIndex;
+	std::vector<__m128> inputArray;
+	std::vector<__m128> outputArray;
+};
+
 
 namespace st {
 	class StApp {
@@ -32,10 +43,14 @@ namespace st {
 		StRenderer stRenderer{stWindow,stDevice};
 
 		std::unique_ptr<StDescriptorPool> globalPool{};
-
-		
+		int cellYRowCount;
+		int cellXMin;
+		int cellXMax;
+		int cellYMin;
+		int cellYMax;
+		std::vector<Cell> cells;
 		std::vector<StGameObject> gameObjects;
 		
-		
+		void createListOfValidCenters(Mesh& mesh);
 	};
 }  

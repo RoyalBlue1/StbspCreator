@@ -2,6 +2,7 @@
 
 #include "st_model.h"
 
+#define GLM_FORCE_SSE2
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -46,8 +47,8 @@ namespace st {
 	};
 
 	struct VertexLitFlat {
-		int vertexIndex;
-		int normalIndex;
+		uint32_t vertexIndex;
+		uint32_t normalIndex;
 		glm::vec2 albedoUv;
 		uint32_t color;
 		float lightMapUv[2];
@@ -69,6 +70,7 @@ namespace st {
 		int normalIndex;
 		glm::vec2 albedoUv;
 		uint32_t color;
+		uint32_t unk[2];
 	};
 
 	struct VertexBlinnPhong {
@@ -133,6 +135,8 @@ namespace st {
 	};
 
 	class BspLoader {
+		
+
     public:
 		
 		BspLoader(const char* fileName, bool multipleMeshes = false) {
@@ -147,6 +151,7 @@ namespace st {
 		void loadFileMultipleMeshes(const char* fileName);
 		void loadFileSingleMesh(const char* fileName);
         std::vector<Mesh> meshes;
+		
 	private:
 
         template<typename T> std::vector<T> loadLump(int index);

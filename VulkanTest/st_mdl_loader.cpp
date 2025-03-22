@@ -119,11 +119,12 @@ namespace st {
 
 	void MdlLoader::loadFileSingleMesh(const char* fileName) {
 		name = fileName;
+		std::replace(name.begin(),name.end(),'/','\\');
 
 
-		file.open(fileName, std::ios::binary);
+		file.open(name, std::ios::binary);
 		if (!file.good()) {
-			printf("missing model %s\n", fileName);
+			printf("missing model %s\n", name.c_str());
 			return;
 		}
 		file.seekg(0, std::ios::beg);
@@ -134,7 +135,7 @@ namespace st {
 		vvd::vertexFileHeader_t* vvdHdr = (vvd::vertexFileHeader_t*)vvdData;
 		vvd::mstudiovertex_t* vvdV = (vvd::mstudiovertex_t*)&vvdData[vvdHdr->vertexDataStart];
 		std::vector<vvd::mstudiovertex_t> vvdVerts;
-
+		uint32_t vertexOffset = 0;
 		if (vvdHdr->numFixups) {
 			vvd::vertexFileFixup_t* fixups = (vvd::vertexFileFixup_t*)&vvdData[vvdHdr->fixupTableStart];
 			for (int i = 0; i < vvdHdr->numFixups; i++) {
@@ -193,6 +194,7 @@ namespace st {
 				size_t modelOffset = mdlBodyPartOffset + mdlBodypart.modelindex + sizeof(r2::mstudiomodel_t) * j;
 				file.seekg(modelOffset);
 				r2::mstudiomodel_t mdlModel;
+				
 				file.read((char*)&mdlModel, sizeof(r2::mstudiomodel_t));
 				for (int k = 0; k < lodHdr->numMeshes; k++) {
 					size_t vtxMeshOffset = vtxLodOffset + lodHdr->meshOffset + sizeof(vtx::MeshHeader_t) * k;
@@ -217,7 +219,7 @@ namespace st {
 							for (int n = 0; n < stripHdr->numIndices; n++) {
 								st::Vertex v;
 								vtx::Vertex_t vtxVert = stripVerts[stripIndices[n]];
-								vvd::mstudiovertex_t& vvdVert = vvdVerts[vtxVert.origMeshVertID];
+								vvd::mstudiovertex_t& vvdVert = vvdVerts[vertexOffset + vtxVert.origMeshVertID];
 								v.position = vvdVert.m_vecPosition;
 								v.uv = vvdVert.m_vecTexCoord;
 								v.materialId = StMaterialManager::getManager().addMaterial(textureNames[mdlMesh.material]);
@@ -229,6 +231,7 @@ namespace st {
 						}
 
 					}
+					vertexOffset += mdlMesh.vertexloddata.numLODVertexes[0];
 				}
 			}
 		}
@@ -237,7 +240,7 @@ namespace st {
 		mesh.finishMesh();
 		free(vtxData);
 		meshes.push_back(mesh);
-
+		file.close();
 
 	}
 

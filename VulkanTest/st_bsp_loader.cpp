@@ -54,7 +54,7 @@ namespace st {
 
 			if(bspMesh.meshFlags&0x60000)continue;
 			std::unordered_map<Vertex,size_t> vertBuildList;
-			Mesh loadedMesh;
+			Mesh loadedMesh{};
 			uint32_t vertexOffset = materialSorts[bspMesh.material_sort].vertexOffset;
 			uint32_t vertexOffset2 = bspMesh.first_vertex;
 			uint32_t materialBspId = materialSorts[bspMesh.material_sort].textureData;
@@ -138,12 +138,14 @@ namespace st {
 		
 	}
 
-	void AngleMatrix( const Vector3 &angles,const Vector3& position,float scale, matrix3x4_t& matrix)
+	void AngleMatrix( const Vector3 &angles,const Vector3& position,float scale)
 	{
 
-
+		const static __m128 conversionFactor = _mm_set1_ps(180.f/glm::pi<float>());
 		float sr, sp, sy, cr, cp, cy;
-
+		__m128 ang = _mm_mul_ps(_mm_set_ps(0.f,angles.z,angles.y,angles.x),conversionFactor);
+		__m128 sinm = _mm_sin_ps(ang);
+		__m128 cosm = _mm_cos_ps(ang);
 
 		sy = sin(angles.y*(180.f/glm::pi<float>()));
 		sp = sin(angles.x*(180.f/glm::pi<float>()));
@@ -154,26 +156,30 @@ namespace st {
 
 
 		// matrix = (YAW * PITCH) * ROLL
-		matrix.m[0][0] = cp*cy*scale;
-		matrix.m[1][0] = cp*sy*scale;
-		matrix.m[2][0] = -sp*scale;
+		//matrix.m[0][0] = cp*cy*scale;
+		//matrix.m[1][0] = cp*sy*scale;
+		//matrix.m[2][0] = -sp*scale;
 
 		float crcy = cr*cy;
-		float crsy = cr*sy;
 		float srcy = sr*cy;
+		float crsy = cr*sy;
 		float srsy = sr*sy;
 
-		matrix.m[0][1] = (sp*srcy-crsy)*scale;
-		matrix.m[1][1] = (sp*srsy+crcy)*scale;
-		matrix.m[2][1] = (sr*cp)*scale;
+		__m128 shuffle_0 = _mm_shuffle_ps(sinm,cosm,_MM_SHUFFLE(1,1,1,1));
+		__m128 shuffle_1 = _mm_shuffle_ps(sinm,cosm,_MM_SHUFFLE(2,2,2,2));
+		__m128 shuffle_2 = _mm_shuffle_ps(shuffle_1,shuffle_1,_MM_SHUFFLE(3,1,3,1));
+		__m128 mul = _mm_mul_ps(shuffle_0,shuffle_2);
+		//matrix.m[0][1] = (sp*srcy-crsy)*scale;
+		//matrix.m[1][1] = (sp*srsy+crcy)*scale;
+		//matrix.m[2][1] = (sr*cp)*scale;
 
-		matrix.m[0][2] = (sp*crcy+srsy)*scale;
-		matrix.m[1][2] = (sp*crsy-srcy)*scale;
-		matrix.m[2][2] = (cr*cp)*scale;
+		//matrix.m[0][2] = (sp*crcy+srsy)*scale;
+		//matrix.m[1][2] = (sp*crsy-srcy)*scale;
+		//matrix.m[2][2] = (cr*cp)*scale;
 
-		matrix.m[0][3] = position.x;
-		matrix.m[1][3] = position.y;
-		matrix.m[2][3] = position.z;
+		//matrix.m[0][3] = position.x;
+		//matrix.m[1][3] = position.y;
+		//matrix.m[2][3] = position.z;
 	}
 
 
@@ -206,7 +212,7 @@ namespace st {
 		std::vector<char> gameLump = loadLump<char>(35);
 
 		std::unordered_map<Vertex,size_t> vertBuildList;
-		Mesh loadedMesh;
+		Mesh loadedMesh{};
 		for (auto& bspMesh : bspMeshes) {
 
 			if(bspMesh.meshFlags&0x60000)continue;
@@ -229,7 +235,7 @@ namespace st {
 				case 0:
 				{
 					auto& vert = vertex_lit_flat[vertexIndex];
-					v.position = vertices[vert.vertexIndex];
+					v.position = vertices[vert.vertexIndex&0x7FFFFFFF];
 					//v.normal = normals[vert.normalIndex];
 					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
 					v.uv = vert.albedoUv;
@@ -238,7 +244,7 @@ namespace st {
 				case 1:
 				{
 					auto& vert = vertex_lit_bump[vertexIndex];
-					v.position = vertices[vert.vertexIndex];
+					v.position = vertices[vert.vertexIndex&0x7FFFFFFF];
 					//v.normal = normals[vert.normalIndex];
 					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
 					v.uv = vert.albedoUv;
@@ -247,7 +253,7 @@ namespace st {
 				case 2:
 				{
 					auto& vert = vertex_unlit[vertexIndex];
-					v.position = vertices[vert.vertexIndex];
+					v.position = vertices[vert.vertexIndex&0x7FFFFFFF];
 					//v.normal = normals[vert.normalIndex];
 					//v.color = { ((vert.color) & 0xFF) / 255.0,((vert.color >> 8) & 0xFF) / 255.0,((vert.color >> 16) & 0xFF) / 255.0 };
 					v.uv = vert.albedoUv;
@@ -345,10 +351,10 @@ namespace st {
 					prop.m_Origin.y,
 					prop.m_Origin.z,
 					0.0f
-}
+				}
 
 			};
-			//AngleMatrix(prop.m_Angles,prop.m_Origin,prop.scale,mat);
+			//AngleMatrix(prop.m_Angles,prop.m_Origin,prop.scale);
 
 			MdlLoader& mdl = mdls[prop.modelIndex];
 			if(mdl.meshes.size()==0)continue;
