@@ -367,3 +367,9 @@ CMakeFiles/
 *.cmake
 CMakeCache.txt
 Makefile
+
+# vpk files
+vpk/
+
+# compiled shader
+*.spv
