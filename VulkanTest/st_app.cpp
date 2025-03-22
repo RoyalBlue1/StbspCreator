@@ -8,6 +8,8 @@
 #include <execution>
 #include <algorithm>
 
+#include <smmintrin.h>
+
 #include "st_math_lib.h"
 
 
@@ -166,7 +168,7 @@ namespace st {
 		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\sp_beacon.bsp"};
 		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\sp_tday.bsp"};
 		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\mp_angel_city.bsp"};
-		BspLoader loader{ "E:\\Titanfall2\\R2Northstar\\mods\\bobthebob.mp_runoff\\mod\\maps\\mp_runoff.bsp" };
+		BspLoader loader{ "/home/krista/code/StbspCreator/vpk/maps/mp_glitch.bsp" };
 		//MdlLoader loader{ "H:\\r2\\r2_vpk\\models\\handrails\\handrail_yellow_128.mdl"};
 		Mesh::Extends& extends = loader.meshes[0].extends;
 
@@ -218,16 +220,16 @@ namespace st {
 
 			__m128 normal = faceNormal_ps(v0, v1, v2);
 			const static __m128 up = _mm_set_ps(0.f, 1.f, 0.f, 0.f);
-			__m128 angle = _mm_acos_ps(dotProduct_ps(normal, up));
-			int mask = _mm_movemask_ps(_mm_cmpge_ps(angle, _mm_set1_ps(.5)));
-			if (mask) {
+			float angle = acosf(_mm_extract_ps(dotProduct_ps(normal, up), 0));
+			// int mask = _mm_movemask_ps(_mm_cmpge_ps(angle, _mm_set1_ps(.5)));
+			if (angle > .5f) {
 				__m128 center = faceCenter_ps(v0, v1, v2);
 				__m128 cellIndices = _mm_div_ps(center, _mm_set1_ps(128.f));
-				int xIndex = (int)cellIndices.m128_f32[0] - cellXMin;
-				int yIndex = (int)cellIndices.m128_f32[1] - cellYMin;
-				if (center.m128_f32[0] < 0);
+				int xIndex = (int)_mm_extract_ps(cellIndices, 0) - cellXMin;
+				int yIndex = (int)_mm_extract_ps(cellIndices, 1) - cellYMin;
+				if (_mm_extract_ps(center, 0) < 0);
 				xIndex--;
-				if (center.m128_f32[1] < 0);
+				if (_mm_extract_ps(center, 1) < 0);
 				yIndex--;
 				cells[yIndex + xIndex * cellYRowCount].inputArray.push_back(center);
 			}

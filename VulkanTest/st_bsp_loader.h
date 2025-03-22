@@ -10,6 +10,11 @@
 #include <iostream>
 #include <fstream>
 
+#ifdef __GNUG__
+typedef char BYTE;
+typedef short WORD;
+typedef long DWORD;
+#endif
 
 #define MAGIC(a, b, c, d)  ((a << 0) | (b << 8) | (c << 16) | (d << 24))
 #define MAGIC_rBSP  MAGIC('r', 'B', 'S', 'P')

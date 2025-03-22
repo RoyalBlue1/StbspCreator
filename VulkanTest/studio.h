@@ -28,6 +28,9 @@
 #define MAX_NUM_BONES_PER_VERT 3
 #define MAX_NUM_EXTRA_BONE_WEIGHTS	16 // for apex legends
 
+#ifdef __GNUG__
+typedef __int64_t __int64;
+#endif
 
 typedef glm::vec2 Vector2D;
 typedef glm::vec3 Vector;
@@ -3228,7 +3231,7 @@ namespace r5
 
 		struct mstudioautolayer_t
 		{
-			unsigned __int64	assetSequence; // hashed aseq guid asset, this needs to have a guid descriptor in rpak
+			__int64				assetSequence; // hashed aseq guid asset, this needs to have a guid descriptor in rpak
 			short				iSequence;
 			short				iPose;
 
@@ -3460,7 +3463,7 @@ namespace r5
 			int sznameindex;
 			inline char* const pszName() const { return ((char*)this + sznameindex); }
 
-			unsigned __int64 textureGuid; // guid/hash of this material
+			__int64 textureGuid; // guid/hash of this material
 		};
 #pragma pack(pop)
 
@@ -4035,7 +4038,7 @@ namespace r5
 }
 
 // for r5 materials
-enum MaterialShaderType_t : unsigned __int8
+enum MaterialShaderType_t : __int8_t
 {
 	RGDU = 0x0,
 	RGDP = 0x1,

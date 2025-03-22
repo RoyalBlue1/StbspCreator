@@ -1,6 +1,12 @@
 #pragma once
 
+#ifdef _WIN32
 #include <intrin.h>
+#endif
+
+#ifdef __GNUG__
+#include <immintrin.h>
+#endif
 
 inline __m128 magnitude_ps(__m128 vec) {
 	__m128 sqr = _mm_mul_ps(vec,vec);

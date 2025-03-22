@@ -14,7 +14,14 @@
 
 #include <vector>
 #include <memory>
+
+#ifdef _WIN32
 #include <intrin.h>
+#endif
+
+#ifdef __GNUG__
+#include <immintrin.h>
+#endif
 
 namespace st {
 	struct Vertex {

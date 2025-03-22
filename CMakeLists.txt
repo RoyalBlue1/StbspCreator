@@ -11,7 +11,6 @@ endif()
 
 project ("VulkanTest")
 
-
-
 # Include sub-projects.
+add_subdirectory ("lib/glfw")
 add_subdirectory ("VulkanTest")

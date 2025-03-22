@@ -367,6 +367,7 @@ CMakeFiles/
 *.cmake
 CMakeCache.txt
 Makefile
+!*toolchain.cmake
 
 # vpk files
 vpk/
