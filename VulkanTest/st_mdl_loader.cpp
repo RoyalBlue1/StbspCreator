@@ -105,6 +105,8 @@ namespace vtx {
 #pragma pack(pop)
 }
 
+inline int maxI(int a, int b){ return (a>b)?a:b;}
+
 
 namespace st {
 
@@ -240,6 +242,37 @@ namespace st {
 		mesh.finishMesh();
 		free(vtxData);
 		meshes.push_back(mesh);
+		if (header.phySize) {
+			char* phyData = (char*)malloc(header.phySize);
+			file.seekg(header.phyOffset);
+			file.read(phyData, header.phySize);
+			phyheader_t* phyHdr = (phyheader_t*)phyData;
+			physection_t* section = (physection_t*)(phyData + sizeof(phyheader_t));
+			phyvertex_t* phyVerts = (phyvertex_t*)(((char*)&section->ledge) + section->ledge.c_point_offset);
+
+			int vertCount = 0;
+			for (int i = 0; i < section->ledge.n_triangles; i++) {
+				vertCount = maxI(vertCount, section->tri[i].c_three_edges[0].start_point_index);
+				vertCount = maxI(vertCount, section->tri[i].c_three_edges[1].start_point_index);
+				vertCount = maxI(vertCount, section->tri[i].c_three_edges[2].start_point_index);
+			}
+			vertCount++;
+
+			std::vector<__m128> verts;
+			//load verts and convert them to source format
+
+			for (int i = 0; i < vertCount; i++) {
+				phyvertex_t* vert = &phyVerts[i];
+				collVerts.push_back(glm::vec3{ vert->pos.x * 39.3701,-vert->pos.z * 39.3701,vert->pos.y * 39.3701 });
+			}
+
+			for (int i = 0; i < section->ledge.n_triangles; i++) {
+				collIndices.push_back(section->tri[i].c_three_edges[0].start_point_index);
+				collIndices.push_back(section->tri[i].c_three_edges[1].start_point_index);
+				collIndices.push_back(section->tri[i].c_three_edges[2].start_point_index);
+			}
+			free(phyData);
+		}
 		file.close();
 
 	}

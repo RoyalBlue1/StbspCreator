@@ -12,3 +12,4 @@ namespace st {
 		(hashCombine(seed, rest), ...);
 	};
 }
+

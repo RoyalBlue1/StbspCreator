@@ -1,6 +1,6 @@
 #pragma once
 
-#include <intrin.h>
+#include <immintrin.h>
 
 inline __m128 magnitude_ps(__m128 vec) {
 	__m128 sqr = _mm_mul_ps(vec,vec);

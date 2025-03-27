@@ -4082,3 +4082,97 @@ struct s_modeldata_t
 
 inline s_modeldata_t g_model;
 
+struct phyheader_t
+{
+	int size; // Size of this header section (generally 16), this is also version.
+	int id; // Often zero, unknown purpose.
+	int solidCount; // Number of solids in file
+	int checkSum; // checksum of source .mdl file (4-bytes)
+};
+
+struct compactedge_t
+{
+	unsigned int	start_point_index : 16; // point index
+	int				opposite_index : 15; // rel to this // maybe extra array, 3 bits more than tri_index/pierce_index
+	unsigned int	is_virtual : 1;
+};
+static_assert(sizeof(compactedge_t) == 4);
+struct compacttriangle_t
+{
+	unsigned int tri_index : 12; // used for upward navigation
+	unsigned int pierce_index : 12;
+	unsigned int material_index : 7;
+	unsigned int is_virtual : 1;
+
+	// three edges
+	compactedge_t c_three_edges[3];
+};
+
+struct compactsurfaceheader_t
+{
+	int size;
+	int id;
+	short version;
+
+	short modeltype;
+
+	int surfacesize;
+
+	Vector dragaxisareas;
+
+	int axismaparea;
+};
+
+struct compactledge_t
+{
+	int c_point_offset; // byte offset from 'this' to (ledge) point array
+	int offsets;
+	int packed;
+	short n_triangles;
+	short for_future_use;
+};
+
+struct swapcompactsurfaceheader_t
+{
+	int		size; // size of the content after this byte
+	int		vphysicsID;
+	short	version;
+	short	modelType;
+	int		surfaceSize;
+	Vector	dragAxisAreas;
+	int		axisMapSize;
+};
+
+struct legacysurfaceheader_t
+{
+	Vector mass_center;
+	Vector rotation_inertia;
+
+	float upper_limit_radius;
+
+	// big if true
+	int	max_deviation : 8;
+	int	byte_size : 24;
+	int	offset_ledgetree_root;
+
+	int dummy[3]; // dummy[2] is id
+};
+
+struct physection_t
+{
+	swapcompactsurfaceheader_t surfaceheader;
+	legacysurfaceheader_t surfaceheader2;
+	compactledge_t ledge;
+	compacttriangle_t tri[1];
+};
+
+struct phyvertex_t
+{
+	Vector3 pos; // relative to bone
+	char pad[4]; // align to 16 bytes
+};
+
+struct edge_t {
+	int verts[2];
+	int faces[2];
+};

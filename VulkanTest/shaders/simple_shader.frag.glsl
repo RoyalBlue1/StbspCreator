@@ -37,7 +37,4 @@ void main() {
 
 	outBin = MATERIAL_HISTOGRAM_BIN_COUNT * texId + uint(mipLevel);
 	
-	//outTexId = texId;
-
-	//atomicAdd(g_histograms[texId*MATERIAL_HISTOGRAM_BIN_COUNT+bin],1);
 }

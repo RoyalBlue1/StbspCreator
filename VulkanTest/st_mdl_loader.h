@@ -28,6 +28,8 @@ namespace st{
 		void loadFileSingleMesh(const char* fileName);
 		std::string name;
 		std::vector<Mesh> meshes;
+		std::vector<uint32_t> collIndices;
+		std::vector<glm::vec3> collVerts;
 	private:
 
 
