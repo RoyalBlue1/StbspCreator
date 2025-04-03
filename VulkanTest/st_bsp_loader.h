@@ -7,6 +7,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include "st_math_lib.h"
 
 #include <iostream>
 #include <fstream>
@@ -48,7 +49,7 @@ namespace st {
 		void loadFileMultipleMeshes(const char* fileName);
 		void loadFileSingleMesh(const char* fileName);
 		void loadCollision(const char* fileName);
-
+		bool doesPointCollide(__m128 point);
 
 		std::set<uint32_t> alreadyAddedPrimitives;
 		CMGrid grid;
@@ -79,6 +80,10 @@ namespace st {
 		std::vector<Brush> brushes;
 		std::vector<uint16_t> brushSidePlaneOffsets;
 		std::vector<Vector4> brushPlanes;
+		std::vector<GridCell> gridCells;
+		std::vector<__m128i> geoSetBounds;
+		std::vector<__m128i> primitiveBounds;
+		bool doesPointCollidePrimitive(__m128 point, uint32_t primitive); 
 		void addPrimitive(uint32_t prim);
 		void addFace(__m128 v0,__m128 v1,__m128 v2);
 		void addPoint(__m128 p);

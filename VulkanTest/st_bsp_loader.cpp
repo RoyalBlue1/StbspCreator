@@ -8,7 +8,6 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-#include "st_math_lib.h"
 #include "st_settings_controller.h"
 namespace st {
 
@@ -392,7 +391,7 @@ namespace st {
 		switch ((PrimitiveType)type) {
 		case PrimitiveType::Brush:
 		{
-			
+
 			Brush& brush = brushes[index];
 			uint32_t priorNonAxialCount = brush.brush_side_offset;
 			std::vector<Vector4> planes;
@@ -402,40 +401,43 @@ namespace st {
 				planes.push_back(brushPlanes[planeIndex]);
 			}
 			float brushGridSize = StSettingsManager::getManager().brushProbeGenerationGridSize;
-
-			for (float x = -brush.extends.x; x < brush.extends.x; x += brushGridSize ) {
-				for (float y = -brush.extends.y; y < brush.extends.y; y += brushGridSize ) {
+			if(brush.origin.x<-2300&&brush.origin.x>-2400&&brush.origin.y<3200&&brush.origin.y>-3350)
+				printf("found");
+			for (float x = brush.origin.x - brush.extends.x; x < brush.origin.x + brush.extends.x; x += brushGridSize ) {
+				for (float y = brush.origin.y - brush.extends.y; y < brush.origin.y + brush.extends.y; y += brushGridSize ) {
 
 					bool inside = true;
+					
 					for (const auto& plane : planes) {
-						float side = glm::dot(plane, glm::vec4{ x,y,brush.extends.z,1.f });
-						if (side < 0) {
+						float side = glm::dot(plane, glm::vec4{ x,y,brush.extends.z+brush.origin.z,-1.f });
+						if (side > 0) {
 							inside = false;
 							break;
 						}
 					}
 					if (inside) {
-						addPoint(_mm_set_ps(0.f,brush.origin.z + brush.extends.z,brush.origin.y+y,brush.origin.x+x));
+						addPoint(_mm_set_ps(0.f,brush.origin.z + brush.extends.z,y,x));
 						continue;
 					}
 
 
 					for (const auto& plane : planes) {
 						float angle = acosf(plane.z);//all other numbers shorten out
-						if(angle<.75f)continue;
-						float z = (x*plane.x+y*plane.y-plane.w)/-plane.z;
+						if(angle>.75f)continue;
+						float a = plane.w-x*plane.x-y*plane.y;
+						float z = a / plane.z;
 						bool inside = true;
-						if(z>brush.extends.z||z<(-brush.extends.z))continue;
+						if(abs(z-brush.origin.z)>brush.extends.z)continue;
 						for (const auto& p : planes) {
 							if(p==plane)continue;
-							float side = glm::dot(p, glm::vec4{ x,y,z,1.f });
-							if (side < 0) {
+							float side = glm::dot(p, glm::vec4{ x,y,z,-1.f });
+							if (side > 0) {
 								inside = false;
 								break;
 							}
 						}
 						if (inside) {
-							addPoint(_mm_set_ps(0.f,z+brush.origin.z,y+brush.origin.y,x+brush.origin.x));
+							addPoint(_mm_set_ps(0.f,z,y,x));
 							break;
 						}
 					}
@@ -463,7 +465,7 @@ namespace st {
 			std::vector<__m128> mdlVerts;
 			for (const auto& v : mdl.collVerts) {
 				glm::vec4 newV = transform* glm::vec4{v,1.f};
-				mdlVerts.push_back(_mm_set_ps(0,v.z,v.y,v.x));
+				mdlVerts.push_back(_mm_set_ps(0,newV.z,newV.y,newV.x));
 			}
 			for (int i = 0; i < mdl.collIndices.size(); i += 3) {
 				addFace(mdlVerts[mdl.collIndices[i]],mdlVerts[mdl.collIndices[i+1]],mdlVerts[mdl.collIndices[i+2]]);
@@ -490,9 +492,64 @@ namespace st {
 		}
 	}
 
+	bool BspLoader::doesPointCollide(__m128 point) {
+		int xId = (int)floorf(((float)(point.m128_f32[0])) / grid.cellSize) - grid.cellOrg[0];
+		int yId = (int)floorf(((float)(point.m128_f32[1])) / grid.cellSize) - grid.cellOrg[1];
+		GridCell& cell = gridCells[yId*grid.cellCount[0]+xId];
+		for (int i = 0; i < cell.geoSetCount; i++) {
+			GeoSet& geoSet = geoSets[cell.geoSetStart + i];
+			if(!boundingBoxCollides(point, geoSetBounds[cell.geoSetStart + i]))continue;
+			if (geoSet.primCount == 1) {
+				if(doesPointCollidePrimitive(point,geoSet.primStart))return true;
+			}
+			else for (int j = 0; j < geoSet.primCount; j++) {
+				uint32_t primitive = primitives[((geoSet.primStart>>8)&0x1FFFFF)+j];
+				if(!boundingBoxCollides(point,primitiveBounds[((geoSet.primStart>>8)&0x1FFFFF)+j]))continue;
+				if(doesPointCollidePrimitive(point,primitive))return true;
+			}
+			
+		}
+		return false;
+	}
+
+	bool BspLoader::doesPointCollidePrimitive(__m128 point, uint32_t prim) {
+		uint32_t flags = uniqueContents[prim&0xFF];
+		uint32_t index = (prim>>8)&0x1FFFFF;
+		uint32_t type = (prim>>29)&0x7;
+		if((flags&PLAYER_CLIP)==0)return false;
+		switch ((PrimitiveType)type) {
+		case PrimitiveType::Brush:
+		{
+			Brush& brush = brushes[index];
+			__m128 brushOrigin = loadVector3(&brush.origin);
+			__m128 brushExtends = loadVector3(&brush.extends);
+			__m128 originOffset = abs_ps(_mm_sub_ps(point,brushOrigin));
+			uint32_t mask = _mm_movemask_ps(_mm_cmpgt_ps(originOffset,brushExtends))&7;
+			if(mask)return false;
+			__m128 pointForPlaneCalc = _mm_add_ps(_mm_and_ps(point,_mm_castsi128_ps(_mm_set_epi32(0,~0,~0,~0))),_mm_set_ps(-1,0,0,0));
+			for (int i = 0; i < brush.num_plane_offsets; i++) {
+				uint32_t planeIndex = grid.basePlaneOffset + i + brush.brush_side_offset - brushSidePlaneOffsets[brush.brush_side_offset+i];
+				__m128 distance = dotProduct_ps(_mm_load_ps(&brushPlanes[planeIndex].x),pointForPlaneCalc);
+				mask = _mm_movemask_ps(_mm_cmpgt_ps(distance,_mm_set1_ps(0)));
+				if (mask) {
+					return false;
+				}
+			}
+			return true;
+		}
+			break;
+		case PrimitiveType::Ticoll:
+		case PrimitiveType::Prop:
+			break;
+		}
+
+		return false;
+	}
+
 	void BspLoader::addPoint(__m128 point) {
 
-		if(point.m128_f32[2]>StSettingsManager::getManager().maxProbeZ)return;
+		if(_mm_movemask_ps(_mm_cmpge_ps(point,StSettingsManager::getManager().maxProbeZ))&0x4)
+			return;
 
 		__m128 cellIndices = _mm_div_ps(point, _mm_set1_ps(128.f));
 		int xIndex = (int)cellIndices.m128_f32[0] - cellXMin;
@@ -503,7 +560,11 @@ namespace st {
 		yIndex--;
 		std::vector<__m128>& input = cells[yIndex + xIndex * cellYRowCount].inputArray;
 		__m128 p = _mm_add_ps(point,_mm_set_ps(0.f,StSettingsManager::getManager().probeHeight, 0.f, 0.f));
-		if(!vecContains(input,p))input.push_back(p);
+		for (auto v : input) {
+			if(_mm_movemask_ps(_mm_cmpeq_ps(v,p))==0xF)return;
+		}
+		input.push_back(p);
+
 	}
 
 	void BspLoader::loadCollision(const char* fileName) {
@@ -515,6 +576,8 @@ namespace st {
 		
 		tricollHeader = loadLump<Tricoll_Header>(TRICOLL_HEADERS);
 		geoSets = loadLump<GeoSet>(CM_GEO_SETS);
+		geoSetBounds = loadLump<__m128i>(CM_GEO_SET_BOUNDS);
+		primitiveBounds = loadLump<__m128i>(CM_PRIMITIVE_BOUNDS);
 		primitives = loadLump<uint32_t>(CM_PRIMITIVES);
 		tricollTris = loadLump<uint32_t>(TRICOLL_TRIANGLES);
 		uniqueContents = loadLump<uint32_t>(CM_UNIQUE_CONTENTS);
@@ -523,6 +586,7 @@ namespace st {
 		brushPlanes = loadLump<Vector4>(BRUSH_PLANES);
 		std::vector<Vector3> verts = loadLump<Vector3>(VERTICES);
 		grid = loadLump<CMGrid>(CM_GRID)[0];
+		gridCells = loadLump<GridCell>(CM_GRID_CELLS);
 		float xMin = grid.cellSize*grid.cellOrg[0];
 		float xMax = grid.cellSize*(grid.cellOrg[0]+grid.cellCount[0]);
 		float yMin = grid.cellSize*grid.cellOrg[1];

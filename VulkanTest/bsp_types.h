@@ -384,3 +384,11 @@ struct Brush {
     Vector3 extends;
     int brush_side_offset;
 };
+
+static_assert(sizeof(Brush)== 0x20);
+static_assert(offsetof(Brush,origin)== 0);
+static_assert(offsetof(Brush,num_non_axial_do_discard)== 0xC);
+static_assert(offsetof(Brush,num_plane_offsets)== 0xD);
+static_assert(offsetof(Brush,index)== 0xE);
+static_assert(offsetof(Brush,extends)== 0x10);
+static_assert(offsetof(Brush,brush_side_offset)== 0x1C);

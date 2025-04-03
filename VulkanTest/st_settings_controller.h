@@ -15,14 +15,14 @@ namespace st {
 		float cellSize;
 		float brushProbeGenerationGridSize;
 		float probeHeight;
-		float maxProbeZ;
+		__m128 maxProbeZ;
 	private:
 		StSettingsManager() {
-			kmeansNodeCount = 16;
+			kmeansNodeCount = 8;
 			cellSize = 128.f;
 			brushProbeGenerationGridSize = 8.f;
 			probeHeight = 64.f;
-			maxProbeZ = 2000.f;
+			maxProbeZ = _mm_set1_ps(2000.f);
 		}
 	};
 

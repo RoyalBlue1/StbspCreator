@@ -98,16 +98,16 @@ namespace st {
 
 		std::vector<std::string> matNames = StMaterialManager::getManager().getMaterialNameList();
 		std::ofstream debugData("H:\\test.txt");
+		int count = 0;
 		for (auto& cell : cells) {
 			for (auto cubeMapPos : cell.outputArray) {
-				debugData << std::format("DebugDrawLine(< {}, {}, {} >,< {}, {}, {} >,255,255,0,true,120)\n",
+				debugData << std::format("< {}, {}, {} >,\n",
 					cubeMapPos.m128_f32[0],
 					cubeMapPos.m128_f32[1],
-					cubeMapPos.m128_f32[2],
-					cubeMapPos.m128_f32[0],
-					cubeMapPos.m128_f32[1],
-					cubeMapPos.m128_f32[2]+10);
+					cubeMapPos.m128_f32[2]);
+				if(count++>32000)break;
 			}
+			if(count>32000)break;
 		}
 		debugData.close();
 		bool shouldClose = false;
@@ -182,6 +182,8 @@ namespace st {
 		}
 		vkDeviceWaitIdle(stDevice.device());
 	}
+
+	
 
 	void calculateCellPositions(Cell& cell) {
 		size_t nodeCount = StSettingsManager::getManager().kmeansNodeCount;
@@ -265,8 +267,14 @@ namespace st {
 
 	}
 
-	void testPointCollisions(const BspLoader& bspLoader,Cell& cell){
-
+	void testPointCollisions(BspLoader& bspLoader,Cell& cell){
+		std::vector<__m128> newInputArray;
+		for (__m128 point: cell.inputArray) {
+			if (!bspLoader.doesPointCollide(point)) {
+				newInputArray.push_back(point);
+			}
+		}
+		cell.inputArray = newInputArray;
 	}
 
 	void StApp::loadGameObjects() {
@@ -276,8 +284,8 @@ namespace st {
 		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\mp_rise.bsp"};
 		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\sp_beacon.bsp"};
 		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\sp_tday.bsp"};
-		BspLoader loader{"H:\\r2\\r2_vpk\\maps\\mp_angel_city.bsp"};
-		//BspLoader loader{ "E:\\Titanfall2\\R2Northstar\\mods\\bobthebob.mp_runoff\\mod\\maps\\mp_runoff.bsp" };
+		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\mp_angel_city.bsp"};
+		BspLoader loader{ "E:\\Titanfall2\\R2Northstar\\mods\\bobthebob.mp_runoff\\mod\\maps\\mp_runoff.bsp" };
 		//MdlLoader loader{ "H:\\r2\\r2_vpk\\models\\handrails\\handrail_yellow_128.mdl"};
 		
 		cells = std::move(loader.cells);
@@ -292,7 +300,8 @@ namespace st {
 
 		}
 
-		std::for_each(std::execution::par, cells.begin(), cells.end(), [](Cell& cell) {
+		std::for_each(std::execution::par, cells.begin(), cells.end(), [&loader](Cell& cell) {
+			testPointCollisions(loader,cell);
 			calculateCellPositions(cell);
 			if(cell.outputArray.size())
 				spdlog::info("cell {} {} computed with {} data points", cell.xIndex, cell.yIndex,cell.inputArray.size());
