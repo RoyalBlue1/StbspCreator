@@ -1,5 +1,6 @@
 // Copyright (c) 2023, rexx
 // See LICENSE.txt for licensing information (GPL v3)
+#include <cstdint>
 
 #pragma once
 
@@ -238,7 +239,7 @@ namespace vg
 		Vector2D m_vecTexCoord;
 		Vector2D m_vecTexCoord2;
 
-		__int64 parentMeshIndex; // index of the mesh that owns this vertex, used for writing, not part of actual struct
+		int64_t parentMeshIndex; // index of the mesh that owns this vertex, used for writing, not part of actual struct
 	};
 #pragma pack(pop)
 
@@ -247,7 +248,7 @@ namespace vg
 	{
 		struct MeshHeader_t
 		{
-			__int64 flags;	// mesh flags
+			int64_t flags;	// mesh flags
 
 			// uses dynamic sized struct, similar to RLE animations
 			unsigned int vertOffset;			    // start offset for this mesh's vertices
@@ -293,7 +294,7 @@ namespace vg
 
 		struct UnkVgData_t
 		{
-			__int64 unk;
+			int64_t unk;
 			float unk1;
 
 			char data[0x24];
@@ -307,43 +308,43 @@ namespace vg
 			int dataSize;	// Total size of data + header in starpak
 
 			// unsigned char
-			__int64 boneStateChangeOffset; // offset to bone remap buffer
-			__int64 boneStateChangeCount;  // number of "bone remaps" (size: 1)
+			int64_t boneStateChangeOffset; // offset to bone remap buffer
+			int64_t boneStateChangeCount;  // number of "bone remaps" (size: 1)
 
 			// MeshHeader_t
-			__int64 meshOffset;   // offset to mesh buffer
-			__int64 meshCount;    // number of meshes (size: 0x48)
+			int64_t meshOffset;   // offset to mesh buffer
+			int64_t meshCount;    // number of meshes (size: 0x48)
 
 			// unsigned short
-			__int64 indexOffset;     // offset to index buffer
-			__int64 indexCount;      // number of indices (size: 2 (uint16_t))
+			int64_t indexOffset;     // offset to index buffer
+			int64_t indexCount;      // number of indices (size: 2 (uint16_t))
 
 			// uses dynamic sized struct, similar to RLE animations
-			__int64 vertOffset;    // offset to vertex buffer
-			__int64 vertBufferSize;     // number of chars in vertex buffer
+			int64_t vertOffset;    // offset to vertex buffer
+			int64_t vertBufferSize;     // number of chars in vertex buffer
 
 			// vvw::mstudioboneweightextra_t
-			__int64 extraBoneWeightOffset;   // offset to extended weights buffer
-			__int64 extraBoneWeightSize;    // number of chars in extended weights buffer
+			int64_t extraBoneWeightOffset;   // offset to extended weights buffer
+			int64_t extraBoneWeightSize;    // number of chars in extended weights buffer
 
 			// there is one for every LOD mesh
 			// i.e, unknownCount == lod.meshCount for all LODs
-			__int64 unknownOffset;   // offset to buffer
-			__int64 unknownCount;    // count (size: 0x30)
+			int64_t unknownOffset;   // offset to buffer
+			int64_t unknownCount;    // count (size: 0x30)
 
 			// ModelLODHeader_t
-			__int64 lodOffset;       // offset to LOD buffer
-			__int64 lodCount;        // number of LODs (size: 0x8)
+			int64_t lodOffset;       // offset to LOD buffer
+			int64_t lodCount;        // number of LODs (size: 0x8)
 
 			// vvd::mstudioboneweight_t
-			__int64 legacyWeightOffset;	// seems to be an offset into the "external weights" buffer for this mesh
-			__int64 legacyWeightCount;   // seems to be the number of "external weights" that this mesh uses
+			int64_t legacyWeightOffset;	// seems to be an offset into the "external weights" buffer for this mesh
+			int64_t legacyWeightCount;   // seems to be the number of "external weights" that this mesh uses
 
 			// vtx::StripHeader_t
-			__int64 stripOffset;    // offset to strips buffer
-			__int64 stripCount;     // number of strips (size: 0x23)
+			int64_t stripOffset;    // offset to strips buffer
+			int64_t stripCount;     // number of strips (size: 0x23)
 
-			__int64 unused[8];
+			int64_t unused[8];
 		};
 	}
 
@@ -353,26 +354,26 @@ namespace vg
 	{
 		struct MeshHeader_t
 		{
-			__int64 flags;
+			int64_t flags;
 
 			int vertCacheSize;		        // number of bytes used from the vertex buffer
 			int vertCount;			        // number of vertices
 
-			__int64 indexOffset;			// start offset for this mesh's "indices"
-			__int64 indexCount : 56;        // number of indices
-			__int64 indexType : 8;			// "type", is this tris vs quads? very odd
+			int64_t indexOffset;			// start offset for this mesh's "indices"
+			int64_t indexCount : 56;        // number of indices
+			int64_t indexType : 8;			// "type", is this tris vs quads? very odd
 
-			__int64 vertOffset;             // start offset for this mesh's vertices
-			__int64 vertBufferSize;         // TOTAL size of vertex buffer
+			int64_t vertOffset;             // start offset for this mesh's vertices
+			int64_t vertBufferSize;         // TOTAL size of vertex buffer
 
-			__int64 externalWeightOffset;	// start offset for this mesh's "extended weights"
-			__int64 externalWeightSize;     // size or count of extended weights
+			int64_t externalWeightOffset;	// start offset for this mesh's "extended weights"
+			int64_t externalWeightSize;     // size or count of extended weights
 
-			__int64 legacyWeightOffset;	    // seems to be an offset into the "external weights" buffer for this mesh
-			__int64 legacyWeightCount;       // seems to be the number of "external weights" that this mesh uses
+			int64_t legacyWeightOffset;	    // seems to be an offset into the "external weights" buffer for this mesh
+			int64_t legacyWeightCount;       // seems to be the number of "external weights" that this mesh uses
 
-			__int64 stripOffset;            // Index into the strips structs
-			__int64 stripCount;
+			int64_t stripOffset;            // Index into the strips structs
+			int64_t stripCount;
 		};
 
 		struct ModelLODHeader_t
@@ -388,7 +389,7 @@ namespace vg
 
 			float switchPoint;
 
-			__int64 meshOffset; // from the start of this value, why?
+			int64_t meshOffset; // from the start of this value, why?
 		};
 
 		// potential for several per file
@@ -3228,7 +3229,7 @@ namespace r5
 
 		struct mstudioautolayer_t
 		{
-			unsigned __int64	assetSequence; // hashed aseq guid asset, this needs to have a guid descriptor in rpak
+			uint64_t	        assetSequence; // hashed aseq guid asset, this needs to have a guid descriptor in rpak
 			short				iSequence;
 			short				iPose;
 
@@ -3460,7 +3461,7 @@ namespace r5
 			int sznameindex;
 			inline char* const pszName() const { return ((char*)this + sznameindex); }
 
-			unsigned __int64 textureGuid; // guid/hash of this material
+			uint64_t textureGuid; // guid/hash of this material
 		};
 #pragma pack(pop)
 
@@ -4035,7 +4036,7 @@ namespace r5
 }
 
 // for r5 materials
-enum MaterialShaderType_t : unsigned __int8
+enum MaterialShaderType_t : uint8_t
 {
 	RGDU = 0x0,
 	RGDP = 0x1,

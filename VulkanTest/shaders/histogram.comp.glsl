@@ -37,16 +37,19 @@ void main(){
 	barrier();
 	uint x_start = uint(gl_WorkGroupID.x) * 16u;
 	uint y_start = uint(gl_WorkGroupID.y) * 16u;
-
+	uint z_start = uint(gl_WorkGroupID.z);
 	for (uint x = x_start; x < x_start + 16u; x++) {
 		for (uint y = y_start; y < y_start + 16u; y++) {
 			uint bin_value = imageLoad(bin,ivec2(x,y)).r;
-			if(bin_value>(MAX_MATERIAL_COUNT*16))continue;
-			atomicAdd(localHistogram[bin_value],1u);
+
+			if(bin_value>(MAX_MATERIAL_COUNT*(z_start+1)*MATERIAL_HISTOGRAM_BIN_COUNT))continue;
+			if(bin_value<(MAX_MATERIAL_COUNT*z_start*MATERIAL_HISTOGRAM_BIN_COUNT))continue;
+			atomicAdd(localHistogram[bin_value-(MAX_MATERIAL_COUNT*z_start*MATERIAL_HISTOGRAM_BIN_COUNT)],1u);
 		}
 	}
 	barrier();
 	for (int i = 0; i < push.matCount * MATERIAL_HISTOGRAM_BIN_COUNT; i++) {
-		atomicAdd(g_histograms[i],localHistogram[i]);
+		if(localHistogram[i]==0)continue;
+		atomicAdd(g_histograms[i+(MAX_MATERIAL_COUNT*z_start*MATERIAL_HISTOGRAM_BIN_COUNT)],localHistogram[i]);
 	}
 }

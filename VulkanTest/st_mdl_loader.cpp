@@ -114,14 +114,12 @@ namespace st {
 
 
 
-	void MdlLoader::loadFileMultipleMeshes(const char* fileName) {
+	void MdlLoader::loadFileMultipleMeshes(fs::path fileName) {
 
 	}
 
 
-	void MdlLoader::loadFileSingleMesh(const char* fileName) {
-		name = fileName;
-		std::replace(name.begin(),name.end(),'/','\\');
+	void MdlLoader::loadFileSingleMesh(fs::path fileName) {
 
 
 		file.open(name, std::ios::binary);

@@ -13,7 +13,7 @@ namespace st {
 	StPipeline::~StPipeline() {
 		vkDestroyShaderModule(stDevice.device(), vertShaderModule, nullptr);
 		vkDestroyShaderModule(stDevice.device(), fragShaderModule, nullptr);
-		vkDestroyShaderModule(stDevice.device(), computeShaderModule, nullptr);
+		//vkDestroyShaderModule(stDevice.device(), computeShaderModule, nullptr);
 		vkDestroyPipeline(stDevice.device(), graphicPipeline, nullptr);
 	}
 	std::vector<char> StPipeline::readFile(const std::string& filepath) {
@@ -32,39 +32,39 @@ namespace st {
 	void StPipeline::createComputePipeline(StDevice& device, const std::string& computeFilepath,VkPipelineLayout pipelineLayout) {
 		vkGetDeviceQueue(device.device(),0,0,&computeQueue);
 
-		//std::array<VkDescriptorSetLayoutBinding, 2> setLayoutBindings = {};
-		//setLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		//setLayoutBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-		//setLayoutBindings[0].binding = 1;
-		//setLayoutBindings[0].descriptorCount = 1;
+		std::array<VkDescriptorSetLayoutBinding, 2> setLayoutBindings = {};
+		setLayoutBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		setLayoutBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		setLayoutBindings[0].binding = 1;
+		setLayoutBindings[0].descriptorCount = 1;
 
-		//setLayoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		//setLayoutBindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-		//setLayoutBindings[1].binding = 2;
-		//setLayoutBindings[1].descriptorCount = 1;
+		setLayoutBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		setLayoutBindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		setLayoutBindings[1].binding = 2;
+		setLayoutBindings[1].descriptorCount = 1;
 
 
-		//VkDescriptorSetLayoutCreateInfo descriptorLayout{};
-		//descriptorLayout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		//descriptorLayout.pBindings = setLayoutBindings.data();
-		//descriptorLayout.bindingCount = (uint32_t)setLayoutBindings.size();
-		//vkCreateDescriptorSetLayout(device.device(),&descriptorLayout,nullptr,&computeDescriptorSetLayout);
+		VkDescriptorSetLayoutCreateInfo descriptorLayout{};
+		descriptorLayout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		descriptorLayout.pBindings = setLayoutBindings.data();
+		descriptorLayout.bindingCount = (uint32_t)setLayoutBindings.size();
+		vkCreateDescriptorSetLayout(device.device(),&descriptorLayout,nullptr,&computeDescriptorSetLayout);
 
-		//std::array<VkPushConstantRange, 1> pushConstants{};
-		//pushConstants[0].offset = 0;
-		//pushConstants[0].size = 68;
-		//pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT|VK_SHADER_STAGE_COMPUTE_BIT;
-		////pushConstants[1].offset = 4*4*4;
-		////pushConstants[1].size = 4;
-		////pushConstants[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		std::array<VkPushConstantRange, 1> pushConstants{};
+		pushConstants[0].offset = 0;
+		pushConstants[0].size = 68;
+		pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT|VK_SHADER_STAGE_COMPUTE_BIT;
+		//pushConstants[1].offset = 4*4*4;
+		//pushConstants[1].size = 4;
+		//pushConstants[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-		//VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
-		//pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		//pipelineLayoutCreateInfo.pSetLayouts = &computeDescriptorSetLayout;
-		//pipelineLayoutCreateInfo.setLayoutCount = 1;
-		//pipelineLayoutCreateInfo.pPushConstantRanges = pushConstants.data();
-		//pipelineLayoutCreateInfo.pushConstantRangeCount = (uint32_t)pushConstants.size();
-		//vkCreatePipelineLayout(device.device(),&pipelineLayoutCreateInfo,nullptr,&computePipelineLayout);
+		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
+		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutCreateInfo.pSetLayouts = &computeDescriptorSetLayout;
+		pipelineLayoutCreateInfo.setLayoutCount = 1;
+		pipelineLayoutCreateInfo.pPushConstantRanges = pushConstants.data();
+		pipelineLayoutCreateInfo.pushConstantRangeCount = (uint32_t)pushConstants.size();
+		vkCreatePipelineLayout(device.device(),&pipelineLayoutCreateInfo,nullptr,&computePipelineLayout);
 
 
 		auto compCode = readFile(computeFilepath);
@@ -87,8 +87,8 @@ namespace st {
 		pipelineCreateInfo.stage = shaderStage;
 		pipelineCreateInfo.flags = 0;
 		
-		vkCreateComputePipelines(device.device(),VK_NULL_HANDLE,1,&pipelineCreateInfo,nullptr,&computePipeline);
-
+		VkResult res = vkCreateComputePipelines(device.device(),VK_NULL_HANDLE,1,&pipelineCreateInfo,nullptr,&computePipeline);
+		printf("%x",res);
 	}
 
 	void StPipeline::createGraphicsPipeline(const StDevice& device, const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo) {
@@ -108,7 +108,7 @@ namespace st {
 
 		createShaderModule(vertCode,&vertShaderModule);
 		createShaderModule(fragCode,&fragShaderModule);
-		//createShaderModule(computeCode,&computeShaderModule);
+
 		VkPipelineShaderStageCreateInfo shaderStages[2];
 
 		shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -126,15 +126,6 @@ namespace st {
 		shaderStages[1].flags = 0;
 		shaderStages[1].pNext = nullptr;
 		shaderStages[1].pSpecializationInfo = nullptr;
-
-		//shaderStages[2].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		//shaderStages[2].stage = VK_SHADER_STAGE_COMPUTE_BIT;
-		//shaderStages[2].module = computeShaderModule;
-		//shaderStages[2].pName = "main";
-		//shaderStages[2].flags = 0;
-		//shaderStages[2].pNext = nullptr;
-		//shaderStages[2].pSpecializationInfo = nullptr;
-
 
 
 

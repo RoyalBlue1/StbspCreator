@@ -10,12 +10,14 @@
 
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
+namespace fs = std::filesystem;
 
 namespace st{
 	class MdlLoader {
 	public:
-		MdlLoader(const char* fileName, bool multipleMeshes = false) {
+		MdlLoader(fs::path fileName, bool multipleMeshes = false) {
 			if(multipleMeshes)
 				loadFileMultipleMeshes(fileName);
 			else
@@ -24,8 +26,8 @@ namespace st{
 
 
 
-		void loadFileMultipleMeshes(const char* fileName);
-		void loadFileSingleMesh(const char* fileName);
+		void loadFileMultipleMeshes(fs::path fileName);
+		void loadFileSingleMesh(fs::path fileName);
 		std::string name;
 		std::vector<Mesh> meshes;
 		std::vector<uint32_t> collIndices;

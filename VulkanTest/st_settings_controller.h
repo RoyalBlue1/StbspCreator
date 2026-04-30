@@ -12,13 +12,16 @@ namespace st {
 		}
 
 		size_t kmeansNodeCount;
+		size_t kmeansIterations;
 		float cellSize;
 		float brushProbeGenerationGridSize;
 		float probeHeight;
 		__m128 maxProbeZ;
+
 	private:
 		StSettingsManager() {
 			kmeansNodeCount = 8;
+			kmeansIterations = 32;
 			cellSize = 128.f;
 			brushProbeGenerationGridSize = 8.f;
 			probeHeight = 64.f;

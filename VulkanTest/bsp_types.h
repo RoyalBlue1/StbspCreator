@@ -11,6 +11,10 @@ typedef glm::vec4 Vector4;
 
 typedef glm::vec3 Vector3;
 
+typedef unsigned char BYTE;
+typedef unsigned short WORD;
+typedef unsigned int DWORD;
+
 enum LumpIds {
     ENTITIES = 0x0000,
     BRUSH_PLANES = 0x0001,

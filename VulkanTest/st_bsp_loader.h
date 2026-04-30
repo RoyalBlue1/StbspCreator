@@ -12,10 +12,11 @@
 #include <iostream>
 #include <fstream>
 #include <set>
-
+#include <filesystem>
 #define MAGIC(a, b, c, d)  ((a << 0) | (b << 8) | (c << 16) | (d << 24))
 #define MAGIC_rBSP  MAGIC('r', 'B', 'S', 'P')
 
+namespace fs = std::filesystem;
 
 namespace st {
 
@@ -36,7 +37,7 @@ namespace st {
 
     public:
 		
-		BspLoader(const char* fileName, bool multipleMeshes = false) {
+		BspLoader(fs::path fileName, bool multipleMeshes = false) {
 			if(multipleMeshes)
 				loadFileMultipleMeshes(fileName);
 			else
@@ -46,9 +47,9 @@ namespace st {
 
 
 
-		void loadFileMultipleMeshes(const char* fileName);
-		void loadFileSingleMesh(const char* fileName);
-		void loadCollision(const char* fileName);
+		void loadFileMultipleMeshes(fs::path fileName);
+		void loadFileSingleMesh(fs::path fileName);
+		void loadCollision(fs::path fileName);
 		bool doesPointCollide(__m128 point);
 
 		std::set<uint32_t> alreadyAddedPrimitives;

@@ -12,12 +12,11 @@ layout (location = 1) out uint outBin;
 
 
 
-
-
 layout(push_constant) uniform Push {
 	mat4 transform; // projection * view * model
 	int matCount;
 } push;
+
 
 
 
@@ -35,6 +34,6 @@ void main() {
 
 	
 
-	outBin = MATERIAL_HISTOGRAM_BIN_COUNT * texId + uint(mipLevel);
-	
+	uint bin = MATERIAL_HISTOGRAM_BIN_COUNT * texId + uint(mipLevel);
+	outBin = bin;
 }

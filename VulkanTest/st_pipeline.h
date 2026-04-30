@@ -48,7 +48,7 @@ namespace st {
 		VkShaderModule vertShaderModule;
 		VkShaderModule fragShaderModule;
 		VkShaderModule computeShaderModule;
-		//VkDescriptorSetLayout computeDescriptorSetLayout;
-		//VkPipelineLayout computePipelineLayout;
+		VkDescriptorSetLayout computeDescriptorSetLayout;
+		VkPipelineLayout computePipelineLayout;
 	};
 }

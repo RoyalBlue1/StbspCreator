@@ -4,8 +4,12 @@
 
 
 
-
-
+find_package(Vulkan REQUIRED)
+if(NOT WIN32)
+    find_package(glm REQUIRED)
+    find_package(glfw3 REQUIRED)
+    find_package(TBB REQUIRED)
+endif()
 # Add source to this project's executable.
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
@@ -19,13 +23,13 @@ if (CMAKE_VERSION VERSION_GREATER 3.12)
 endif()
 
 # TODO: Add tests and install targets if needed.
-find_package(Vulkan REQUIRED)
 
 
+set(GLSLC_PATH )
 
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/simple_shader.vert.spv"
-    COMMAND $ENV{VK_SDK_PATH}/Bin/glslc.exe "shaders/simple_shader.vert.glsl" -o "${CMAKE_CURRENT_BINARY_DIR}/simple_shader.vert.spv"
+    COMMAND $ENV{VK_SKD_PATH}/bin/glslc "shaders/simple_shader.vert.glsl" -o "${CMAKE_CURRENT_BINARY_DIR}/simple_shader.vert.spv"
     DEPENDS "shaders/simple_shader.vert.glsl"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Buiding simple vert shader"
@@ -33,7 +37,7 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/simple_shader.frag.spv"
-    COMMAND $ENV{VK_SDK_PATH}/Bin/glslc.exe "shaders/simple_shader.frag.glsl" -o "${CMAKE_CURRENT_BINARY_DIR}/simple_shader.frag.spv" 
+    COMMAND $ENV{VK_SKD_PATH}/bin/glslc "shaders/simple_shader.frag.glsl" -o "${CMAKE_CURRENT_BINARY_DIR}/simple_shader.frag.spv"
     DEPENDS "shaders/simple_shader.frag.glsl"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Buiding simple frag shader"
@@ -41,7 +45,7 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/histogram.comp.spv"
-    COMMAND $ENV{VK_SDK_PATH}/Bin/glslc.exe "shaders/histogram.comp.glsl" -o "${CMAKE_CURRENT_BINARY_DIR}/histogram.comp.spv" 
+    COMMAND $ENV{VK_SKD_PATH}/bin/glslc "shaders/histogram.comp.glsl" -o "${CMAKE_CURRENT_BINARY_DIR}/histogram.comp.spv"
     DEPENDS "shaders/histogram.comp.glsl"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Buiding histogram shader"
@@ -51,6 +55,11 @@ add_custom_target(FragShader DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/simple_shader.
 add_custom_target(VertShader DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/simple_shader.vert.spv")
 add_custom_target(CompShader DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/histogram.comp.spv")
 
-target_link_libraries(rStream PRIVATE Vulkan::Vulkan ${PROJECT_SOURCE_DIR}/lib/glfw3.lib)
+if(WIN32)
+    target_link_libraries(rStream PRIVATE Vulkan::Vulkan ${PROJECT_SOURCE_DIR}/lib/glfw3.lib)
+else()
+    target_link_libraries(rStream PRIVATE Vulkan::Vulkan glm::glm glfw TBB::tbb)
+endif()
+target_compile_options(rStream PRIVATE -mavx)
 
 add_dependencies(rStream VertShader FragShader CompShader)

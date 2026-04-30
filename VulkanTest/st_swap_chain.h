@@ -37,6 +37,12 @@ namespace st {
         VkDescriptorImageInfo* binDescriptorInfo(int index) {
             return &binBindDescriptorInfo[index];
         }
+        VkImage getBinImage(int index) {
+            return binSwapChainImages[index];
+        }
+        VkImageView getBinComputeView(int index) {
+            return binComputeImageViews[index];
+        }
     private:
         void init();
         void createSwapChain();
@@ -63,6 +69,7 @@ namespace st {
         std::vector<VkImageView> swapChainImageViews;
         std::vector<VkImage> binSwapChainImages;
         std::vector<VkImageView> binSwapChainImageViews;
+        std::vector<VkImageView> binComputeImageViews;
         std::vector<VkDeviceMemory> binSwapChainImageMemory;
         VkSampler binSampler;
         std::vector<VkDescriptorImageInfo> binBindDescriptorInfo;

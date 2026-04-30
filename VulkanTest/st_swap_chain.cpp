@@ -222,6 +222,7 @@ namespace st {
     void StSwapChain::createImageViews() {
         swapChainImageViews.resize(swapChainImages.size());
         binSwapChainImageViews.resize(binSwapChainImages.size());
+        binComputeImageViews.resize(binSwapChainImages.size());
         //texIdSwapChainImageViews.resize(texIdSwapChainImages.size());
 
         VkSamplerCreateInfo samplerInfo{};
@@ -263,6 +264,12 @@ namespace st {
                 VK_SUCCESS) {
                 throw std::runtime_error("failed to create texture image view!");
             }
+            
+
+            if (vkCreateImageView(device.device(), &viewInfo, nullptr, &binComputeImageViews[i]) !=
+                VK_SUCCESS) {
+                throw std::runtime_error("failed to create texture image view!");
+            }
 
             VkDescriptorImageInfo imageInfo{};
             imageInfo.sampler = binSampler;
@@ -297,7 +304,7 @@ namespace st {
         binAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         binAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         binAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        binAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        binAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         //VkAttachmentDescription texIdAttachment{};
         //texIdAttachment.format = VK_FORMAT_R32_UINT;
         //texIdAttachment.samples = VK_SAMPLE_COUNT_1_BIT;

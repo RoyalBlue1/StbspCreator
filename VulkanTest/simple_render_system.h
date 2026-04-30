@@ -14,17 +14,18 @@ namespace st {
 	public:
 
 
-		SimpleRenderSystem(StDevice& device,VkRenderPass renderPass,VkDescriptorSetLayout globalSetLayout);
+		SimpleRenderSystem(StDevice& device,VkRenderPass renderPass,VkDescriptorSetLayout graphicSetLayout);
 		~SimpleRenderSystem();
 
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
 		SimpleRenderSystem &operator=(const SimpleRenderSystem &)=delete;
 
 		void renderGameObjects(FrameInfo & frameInfo,std::vector<StGameObject>& gameObjects);
-		void computeHistogram(VkCommandBuffer& commandBuffer,uint32_t windowX, uint32_t windowY,VkDescriptorSet* descriptorSet);
+		void computeHistogram(VkCommandBuffer& commandBuffer,uint32_t windowX, uint32_t windowY,uint32_t numTextures,VkDescriptorSet* descriptorSet);
 	private:
 
-		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
+		void createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout);
+		void createComputePipelineLayout(VkDescriptorSetLayout globalSetLayout);
 		void createPipeline(VkRenderPass rendrPass);
 		
 
@@ -34,6 +35,7 @@ namespace st {
 
 		std::unique_ptr<StPipeline> stPipeline;
 		VkPipelineLayout graphicPipelineLayout;
+		VkPipelineLayout computePipelineLayout;
 
 	};
 }  

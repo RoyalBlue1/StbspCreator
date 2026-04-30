@@ -9,9 +9,9 @@
 #include "st_buffer.h"
 #include "st_descriptors.h"
 #include <memory>
+#include <filesystem>
 
-
-
+namespace fs = std::filesystem;
 
 namespace st {
 	class StApp {
@@ -19,13 +19,13 @@ namespace st {
 		static constexpr int WIDTH = 1920;
 		static constexpr int HEIGHT = 1080;
 		void run();
-		StApp();
+		StApp(fs::path bspFilePath);
 		~StApp();
 
 		StApp(const StApp&) = delete;
 		StApp &operator=(const StApp &)=delete;
 	private:
-		void loadGameObjects();
+		void loadGameObjects(fs::path bspFilePath);
 
 		
 

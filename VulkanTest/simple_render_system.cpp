@@ -16,7 +16,8 @@ namespace st {
 
 	SimpleRenderSystem::SimpleRenderSystem(StDevice& device, VkRenderPass renderPass,VkDescriptorSetLayout globalSetLayout) :stDevice{ device } {
 
-		createPipelineLayout(globalSetLayout);
+		createGraphicPipelineLayout(globalSetLayout);
+		createComputePipelineLayout(globalSetLayout);
 		createPipeline(renderPass);
 	}
 	SimpleRenderSystem::~SimpleRenderSystem() {
@@ -24,7 +25,7 @@ namespace st {
 	}
 
 	
-	void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
+	void SimpleRenderSystem::createGraphicPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
 
 		VkPushConstantRange pushConstantRange{};
 		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
@@ -44,6 +45,26 @@ namespace st {
 		if (vkCreatePipelineLayout(stDevice.device(), &pipelineLayoutInfo, nullptr, &graphicPipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("couldn't create pipeline layout");
 		}
+	}
+
+	void SimpleRenderSystem::createComputePipelineLayout(VkDescriptorSetLayout computeSetLayout) {
+
+
+		std::array<VkPushConstantRange, 1> pushConstants{};
+		pushConstants[0].offset = 0;
+		pushConstants[0].size = 68;
+		pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT| VK_SHADER_STAGE_FRAGMENT_BIT|VK_SHADER_STAGE_COMPUTE_BIT;
+		//pushConstants[1].offset = 4*4*4;
+		//pushConstants[1].size = 4;
+		//pushConstants[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+		VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo{};
+		pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutCreateInfo.pSetLayouts = &computeSetLayout;
+		pipelineLayoutCreateInfo.setLayoutCount = 1;
+		pipelineLayoutCreateInfo.pPushConstantRanges = pushConstants.data();
+		pipelineLayoutCreateInfo.pushConstantRangeCount = (uint32_t)pushConstants.size();
+		vkCreatePipelineLayout(stDevice.device(),&pipelineLayoutCreateInfo,nullptr,&computePipelineLayout);
 	}
 
 	void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
@@ -94,19 +115,19 @@ namespace st {
 
 		
 	}
-	void SimpleRenderSystem::computeHistogram(VkCommandBuffer& commandBuffer,uint32_t windowX, uint32_t windowY,VkDescriptorSet* descriptorSet) {
+	void SimpleRenderSystem::computeHistogram(VkCommandBuffer& commandBuffer,uint32_t windowX, uint32_t windowY,uint32_t numTextures,VkDescriptorSet* descriptorSet) {
 		stPipeline->bindCompute(commandBuffer);
 		vkCmdBindDescriptorSets(
 			commandBuffer,
 			VK_PIPELINE_BIND_POINT_COMPUTE,
-			graphicPipelineLayout,
+			computePipelineLayout,
 			0,
 			1,
 			descriptorSet,
 			0,
 			nullptr
 		);
-		vkCmdDispatch(commandBuffer,windowX/16,windowY/16,1);
+		vkCmdDispatch(commandBuffer,windowX/16,windowY/16,(numTextures+511)/512);
 	}
 	
 }

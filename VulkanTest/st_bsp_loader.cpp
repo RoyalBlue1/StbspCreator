@@ -7,6 +7,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+#include <immintrin.h>
 
 #include "st_settings_controller.h"
 namespace st {
@@ -25,7 +26,7 @@ namespace st {
 		return vec;
 	}
 
-	void BspLoader::loadFileMultipleMeshes(const char* fileName) {
+	void BspLoader::loadFileMultipleMeshes(fs::path fileName) {
 
 
 		file.open(fileName,std::ios::binary);
@@ -138,49 +139,6 @@ namespace st {
 		
 	}
 
-	void AngleMatrix( const Vector3 &angles,const Vector3& position,float scale)
-	{
-
-		const static __m128 conversionFactor = _mm_set1_ps(180.f/glm::pi<float>());
-		float sr, sp, sy, cr, cp, cy;
-		__m128 ang = _mm_mul_ps(_mm_set_ps(0.f,angles.z,angles.y,angles.x),conversionFactor);
-		__m128 sinm = _mm_sin_ps(ang);
-		__m128 cosm = _mm_cos_ps(ang);
-
-		sy = sin(angles.y*(180.f/glm::pi<float>()));
-		sp = sin(angles.x*(180.f/glm::pi<float>()));
-		sr = sin(angles.z*(180.f/glm::pi<float>()));
-		cy = cos(angles.y*(180.f/glm::pi<float>()));
-		cp = cos(angles.x*(180.f/glm::pi<float>()));
-		cr = cos(angles.z*(180.f/glm::pi<float>()));
-
-
-		// matrix = (YAW * PITCH) * ROLL
-		//matrix.m[0][0] = cp*cy*scale;
-		//matrix.m[1][0] = cp*sy*scale;
-		//matrix.m[2][0] = -sp*scale;
-
-		float crcy = cr*cy;
-		float srcy = sr*cy;
-		float crsy = cr*sy;
-		float srsy = sr*sy;
-
-		__m128 shuffle_0 = _mm_shuffle_ps(sinm,cosm,_MM_SHUFFLE(1,1,1,1));
-		__m128 shuffle_1 = _mm_shuffle_ps(sinm,cosm,_MM_SHUFFLE(2,2,2,2));
-		__m128 shuffle_2 = _mm_shuffle_ps(shuffle_1,shuffle_1,_MM_SHUFFLE(3,1,3,1));
-		__m128 mul = _mm_mul_ps(shuffle_0,shuffle_2);
-		//matrix.m[0][1] = (sp*srcy-crsy)*scale;
-		//matrix.m[1][1] = (sp*srsy+crcy)*scale;
-		//matrix.m[2][1] = (sr*cp)*scale;
-
-		//matrix.m[0][2] = (sp*crcy+srsy)*scale;
-		//matrix.m[1][2] = (sp*crsy-srcy)*scale;
-		//matrix.m[2][2] = (cr*cp)*scale;
-
-		//matrix.m[0][3] = position.x;
-		//matrix.m[1][3] = position.y;
-		//matrix.m[2][3] = position.z;
-	}
 
 	glm::mat4 createTransformationMatrix_Source(glm::vec3 angles, glm::vec3 origin,float scale) {
 		float sy = sin(angles.y*(glm::pi<float>()/180.f));
@@ -219,7 +177,7 @@ namespace st {
 	}
 
 
-	void BspLoader::loadFileSingleMesh(const char* fileName) {
+	void BspLoader::loadFileSingleMesh(fs::path fileName) {
 
 
 		file.open(fileName,std::ios::binary);
@@ -332,13 +290,17 @@ namespace st {
 		int modelNameCount,leafCount,propCount;
 		modelNameCount = *(int*)&gameLump[readPtr];
 		readPtr+=4;
-		
+		fs::path modelBase = fileName.remove_filename();
+		if (!fs::exists(modelBase/"models"))
+		{
+			modelBase = modelBase.parent_path();
+		}
 		for (int i = 0; i < modelNameCount; i++) {
 			char mdlName[129];
 			strncpy(mdlName,&gameLump[readPtr],128);
 			mdlName[128] = 0;
 			readPtr+=128;
-			mdls.emplace_back((std::string("H:\\r2\\r2_vpk\\")+mdlName).c_str());
+			mdls.emplace_back(modelBase/mdlName);
 		}
 		//skip leafData
 		//leafCount = *(int*)&gameLump[readPtr];
@@ -484,7 +446,7 @@ namespace st {
 	void BspLoader::addFace(__m128 v0, __m128 v1, __m128 v2) {
 		__m128 normal = faceNormal_ps(v0, v1, v2);
 		const static __m128 up = _mm_set_ps(0.f, -1.f, 0.f, 0.f);
-		__m128 angle = _mm_acos_ps(dotProduct_ps(up,normal));
+		__m128 angle = _mm_set1_ps(acos(_mm_cvtss_f32(dotProduct_ps(up,normal))));
 		int mask = _mm_movemask_ps(_mm_cmpge_ps(angle, _mm_set1_ps(.5)));
 		if (mask) {
 			__m128 center = faceCenter_ps(v0, v1, v2);
@@ -493,8 +455,11 @@ namespace st {
 	}
 
 	bool BspLoader::doesPointCollide(__m128 point) {
-		int xId = (int)floorf(((float)(point.m128_f32[0])) / grid.cellSize) - grid.cellOrg[0];
-		int yId = (int)floorf(((float)(point.m128_f32[1])) / grid.cellSize) - grid.cellOrg[1];
+		float x = _mm_cvtss_f32(point);
+		float y = _mm_cvtss_f32(_mm_shuffle_ps(point,point,_MM_SHUFFLE(1,1,1,1)));
+
+		int xId = (int)floorf(x / grid.cellSize) - grid.cellOrg[0];
+		int yId = (int)floorf(y / grid.cellSize) - grid.cellOrg[1];
 		GridCell& cell = gridCells[yId*grid.cellCount[0]+xId];
 		for (int i = 0; i < cell.geoSetCount; i++) {
 			GeoSet& geoSet = geoSets[cell.geoSetStart + i];
@@ -552,12 +517,18 @@ namespace st {
 			return;
 
 		__m128 cellIndices = _mm_div_ps(point, _mm_set1_ps(128.f));
-		int xIndex = (int)cellIndices.m128_f32[0] - cellXMin;
-		int yIndex = (int)cellIndices.m128_f32[1] - cellYMin;
-		if (point.m128_f32[0] < 0);
-		xIndex--;
-		if (point.m128_f32[1] < 0);
-		yIndex--;
+		int xIndex = (int)_mm_cvtss_f32(cellIndices) - cellXMin;
+		int yIndex = (int)_mm_cvtss_f32(_mm_shuffle_ps(cellIndices,cellIndices,_MM_SHUFFLE(1,1,1,1))) - cellYMin;
+		uint8_t pointLessThan0 = _mm_movemask_ps(_mm_cmplt_ps(cellIndices,_mm_setzero_ps()));
+		if (pointLessThan0 & 0x1)
+			xIndex--;
+		if (pointLessThan0 & 0x2)
+			yIndex--;
+		if(xIndex<0||xIndex>=(cellXMax-cellXMin))
+			return;
+		if (yIndex <0 ||yIndex>=cellYRowCount )
+			return;
+
 		std::vector<__m128>& input = cells[yIndex + xIndex * cellYRowCount].inputArray;
 		__m128 p = _mm_add_ps(point,_mm_set_ps(0.f,StSettingsManager::getManager().probeHeight, 0.f, 0.f));
 		for (auto v : input) {
@@ -567,10 +538,14 @@ namespace st {
 
 	}
 
-	void BspLoader::loadCollision(const char* fileName) {
-		file.open(fileName,std::ios::binary);
-		file.seekg(0,std::ios::beg);
-		file.read((char*) & header, sizeof(header));
+	void BspLoader::loadCollision(fs::path fileName) {
+		if (!file.is_open())
+		{
+			file.open(fileName,std::ios::binary);
+			file.seekg(0,std::ios::beg);
+			file.read((char*) & header, sizeof(header));
+		}
+
 		if(header.magic!=MAGIC_rBSP)return;
 
 		

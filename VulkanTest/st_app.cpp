@@ -8,6 +8,7 @@
 #include <execution>
 #include <algorithm>
 
+
 #include "st_math_lib.h"
 #include "st_settings_controller.h"
 
@@ -17,6 +18,7 @@
 #include <glm/glm.hpp>
 
 
+
 namespace st {
 
 	struct GlobalUbo {
@@ -24,7 +26,7 @@ namespace st {
 		glm::vec3 lightDirection = glm::normalize(glm::vec3{ 1.f, -3.f, -1.f });
 	};
 
-	StApp::StApp()
+	StApp::StApp(fs::path bspFilePath)
 	{
 		globalPool = StDescriptorPool::Builder(stDevice)
 			.setMaxSets(StSwapChain::MAX_FRAMES_IN_FLIGHT)
@@ -32,7 +34,7 @@ namespace st {
 			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, StSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, StSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.build();
-		loadGameObjects();
+		loadGameObjects(bspFilePath);
 
 	}
 	StApp::~StApp() {
@@ -70,11 +72,14 @@ namespace st {
 			.addBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT)
 			.build();
 
+
 		std::vector<VkDescriptorSet> globalDescriptorSets(StSwapChain::MAX_FRAMES_IN_FLIGHT);
 
 
 
-		SimpleRenderSystem simpleRender{ stDevice,stRenderer.getSwapChainRenderPass(),globalSetLayout->getDescriptorSetLayout() };
+
+
+		SimpleRenderSystem simpleRender{ stDevice,stRenderer.getSwapChainRenderPass(),globalSetLayout->getDescriptorSetLayout()};
 		StCamera camera{};
 		//auto viewerObject = StGameObject::createGameObject();
 		//KeyboardMovementController cameraController{};
@@ -97,14 +102,15 @@ namespace st {
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
 		std::vector<std::string> matNames = StMaterialManager::getManager().getMaterialNameList();
-		std::ofstream debugData("H:\\test.txt");
+		std::ofstream debugData("test.txt");
 		int count = 0;
+
 		for (auto& cell : cells) {
 			for (auto cubeMapPos : cell.outputArray) {
+				float pos[4];
+				_mm_store_ps(pos, cubeMapPos);
 				debugData << std::format("< {}, {}, {} >,\n",
-					cubeMapPos.m128_f32[0],
-					cubeMapPos.m128_f32[1],
-					cubeMapPos.m128_f32[2]);
+					pos[0], pos[1], pos[2]);
 				if(count++>32000)break;
 			}
 			if(count>32000)break;
@@ -143,7 +149,7 @@ namespace st {
 						//uboBuffers[frameIndex]->writeToBuffer(&ubo);
 						//uboBuffers[frameIndex]->flush();
 
-						//uint32_t* histogramData = (uint32_t*)histogramBuffer[frameIndex]->getMappedMemory();
+						
 
 
 
@@ -166,14 +172,17 @@ namespace st {
 						//}
 
 
-						//memset(histogramData, 0, histogramBuffer[frameIndex]->getBufferSize());
-						//histogramBuffer[frameIndex]->flush();
+						
+						
 
 
 						stRenderer.endSwapChainRenderpass(commandBuffer);
-						//simpleRender.computeHistogram(commandBuffer,stWindow.getExtent().width,stWindow.getExtent().height, &globalDescriptorSets[frameIndex]);
+						stRenderer.imageRenderBarrier(commandBuffer);
+						simpleRender.computeHistogram(commandBuffer,stWindow.getExtent().width,stWindow.getExtent().height,StMaterialManager::getManager().getMaterialCount(), &globalDescriptorSets[frameIndex]);
+
 
 						stRenderer.endFrame();
+						
 					}
 				}
 				if(shouldClose)break;
@@ -203,7 +212,7 @@ namespace st {
 		pointsPerNode.resize(nodeCount);
 
 		__m128 bestDistance = _mm_set1_ps(std::numeric_limits<float>::max());
-		for (int iterations = 0; iterations < 32; iterations++) {
+		for (int iterations = 0; iterations < StSettingsManager::getManager().kmeansIterations; iterations++) {
 			for (int i = 0; i < nodeCount; i++) {
 				__m128 n;
 				do {
@@ -277,16 +286,10 @@ namespace st {
 		cell.inputArray = newInputArray;
 	}
 
-	void StApp::loadGameObjects() {
-		//centers.resize();
+	void StApp::loadGameObjects(fs::path bspFilePath) {
 
-		//std::shared_ptr<StModel> stModel = createCubeModel(stDevice,{.0f,.0f,.0f});
-		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\mp_rise.bsp"};
-		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\sp_beacon.bsp"};
-		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\sp_tday.bsp"};
-		//BspLoader loader{"H:\\r2\\r2_vpk\\maps\\mp_angel_city.bsp"};
-		BspLoader loader{ "E:\\Titanfall2\\R2Northstar\\mods\\bobthebob.mp_runoff\\mod\\maps\\mp_runoff.bsp" };
-		//MdlLoader loader{ "H:\\r2\\r2_vpk\\models\\handrails\\handrail_yellow_128.mdl"};
+		BspLoader loader{bspFilePath};
+
 		
 		cells = std::move(loader.cells);
 		for (auto& mesh : loader.meshes) {

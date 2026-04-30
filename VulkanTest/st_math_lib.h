@@ -58,5 +58,12 @@ inline bool boundingBoxCollides(__m128 point, __m128i box) {
 }
 
 inline __m128 loadVector3(Vector3* vec) {
-	return _mm_maskload_ps(&vec->x,_mm_set_epi32(0,~0,~0,~0));
+	if (__builtin_cpu_supports("avx"))
+	{
+		return _mm_maskload_ps(&vec->x,_mm_set_epi32(0,~0,~0,~0));
+	}else
+	{
+		return _mm_set_ps(0,vec->z,vec->y,vec->x);
+	}
+
 }

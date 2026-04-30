@@ -19,10 +19,16 @@
 
 
 
-int main()
+int main(int argc, const char* argv[])
 {
-    st::StApp app{};
 
+    if (argc < 2)
+    {
+        spdlog::info("Usage: {} <filename>",argv[0]);
+        return EXIT_FAILURE;
+    }
+    fs::path fileName(argv[1]);
+    st::StApp app{fileName};
     try {
         app.run();
     } catch (const std::exception &e) {
