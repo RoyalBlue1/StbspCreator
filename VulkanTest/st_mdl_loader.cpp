@@ -122,7 +122,7 @@ namespace st {
 	void MdlLoader::loadFileSingleMesh(fs::path fileName) {
 
 
-		file.open(name, std::ios::binary);
+		file.open(fileName, std::ios::binary);
 		if (!file.good()) {
 			printf("missing model %s\n", name.c_str());
 			return;

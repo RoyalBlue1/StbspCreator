@@ -16,8 +16,8 @@ namespace fs = std::filesystem;
 namespace st {
 	class StApp {
 	public:
-		static constexpr int WIDTH = 1920;
-		static constexpr int HEIGHT = 1080;
+		static constexpr int WIDTH = 1024;
+		static constexpr int HEIGHT = 1024;
 		void run();
 		StApp(fs::path bspFilePath);
 		~StApp();

@@ -29,6 +29,7 @@ namespace st {
 		int yIndex;
 		std::vector<__m128> inputArray;
 		std::vector<__m128> outputArray;
+		std::vector<uint32_t> histogramData;
 	};
 	
 

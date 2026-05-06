@@ -44,7 +44,7 @@ namespace st {
 			return stSwapChain->binDescriptorInfo(index);
 		}
 
-		void imageRenderBarrier(VkCommandBuffer commandBuffer) {
+		void binImageComputeStartBarrier(VkCommandBuffer commandBuffer) {
 
 			VkImageSubresourceRange range = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -59,7 +59,7 @@ namespace st {
 				.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 				.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 				.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				.newLayout = VK_IMAGE_LAYOUT_GENERAL, // or SHADER_READ_ONLY_OPTIMAL
+				.newLayout = VK_IMAGE_LAYOUT_GENERAL,
 				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 				.image = stSwapChain->getBinImage(currentFrameIndex),
@@ -70,6 +70,41 @@ namespace st {
 				commandBuffer,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				0,
+				0,
+				NULL,
+				0,
+				NULL,
+				1,
+				&barrier
+			);
+		}
+		void binImageComputeEndBarrier(VkCommandBuffer commandBuffer) {
+
+			VkImageSubresourceRange range = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			};
+
+			VkImageMemoryBarrier barrier = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				.oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+				.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = stSwapChain->getBinImage(currentFrameIndex),
+				.subresourceRange = range
+
+			};
+			vkCmdPipelineBarrier(
+				commandBuffer,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				0,
 				0,
 				NULL,

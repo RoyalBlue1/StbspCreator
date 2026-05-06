@@ -68,7 +68,7 @@ namespace st {
 
 
 		auto compCode = readFile(computeFilepath);
-		std::cout << "Compute Shader Code Size: " << compCode.size() << '\n';
+		//std::cout << "Compute Shader Code Size: " << compCode.size() << '\n';
 
 		createShaderModule(compCode,&computeShaderModule);
 		VkPipelineShaderStageCreateInfo shaderStage{};
@@ -87,8 +87,7 @@ namespace st {
 		pipelineCreateInfo.stage = shaderStage;
 		pipelineCreateInfo.flags = 0;
 		
-		VkResult res = vkCreateComputePipelines(device.device(),VK_NULL_HANDLE,1,&pipelineCreateInfo,nullptr,&computePipeline);
-		printf("%x",res);
+		vkCreateComputePipelines(device.device(),VK_NULL_HANDLE,1,&pipelineCreateInfo,nullptr,&computePipeline);
 	}
 
 	void StPipeline::createGraphicsPipeline(const StDevice& device, const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo) {
@@ -103,8 +102,8 @@ namespace st {
 		auto vertCode = readFile(vertFilepath);
 		auto fragCode = readFile(fragFilepath);
 		
-		std::cout << "Vertex Shader Code Size: " << vertCode.size() << '\n';
-		std::cout << "Fragment Shader Code Size: " << fragCode.size() << '\n';
+		//std::cout << "Vertex Shader Code Size: " << vertCode.size() << '\n';
+		//std::cout << "Fragment Shader Code Size: " << fragCode.size() << '\n';
 
 		createShaderModule(vertCode,&vertShaderModule);
 		createShaderModule(fragCode,&fragShaderModule);

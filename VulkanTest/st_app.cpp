@@ -63,6 +63,8 @@ namespace st {
 				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 			histogramBuffer[i]->map();
+			memset(histogramBuffer[i]->getMappedMemory(),0,histogramBuffer[i]->getInstanceSize());
+			histogramBuffer[i]->unmap();
 		}
 
 
@@ -118,8 +120,9 @@ namespace st {
 		debugData.close();
 		bool shouldClose = false;
 		for (auto& cell : cells) {
+			if (!cell.outputArray.size())continue;
 			for (auto cubeMapPos : cell.outputArray) {
-				for (int sideIndex = 0; sideIndex < 1; sideIndex++) {
+				for (int sideIndex = 0; sideIndex < 6; sideIndex++) {
 					bool shouldClose = stWindow.shouldClose();
 					if(shouldClose)break;
 					glfwPollEvents();
@@ -133,7 +136,17 @@ namespace st {
 					float z = _mm_cvtss_f32(_mm_shuffle_ps(cubeMapPos, cubeMapPos, _MM_SHUFFLE(0, 0, 0, 2)));
 
 					//cameraController.moveInPlaneXZ(stWindow.getGLFWwindow(), frameTime, viewerObject);
-					camera.setViewYXZ(glm::vec3{ x,-z,y }, glm::vec3{ 0.f,glm::pi<float>() * sideIndex * 2.f/1.f,0.f });
+					static std::vector<glm::vec3> sides = {
+						{0.f,0.f,0.f},
+						{0.f,glm::radians(90.f),0.f},
+						{0.f,glm::radians(180.f),0.f},
+						{0.f,glm::radians(270.f),0.f},
+						{glm::radians(90.f),0.f,0.f},
+						{glm::radians(-90.f),0.f,0.f}
+					};
+
+
+					camera.setViewYXZ(glm::vec3{ x,-z,y }, sides[sideIndex]);
 					float aspect = stRenderer.getAspectRatio();
 					camera.setPerspectiveProjection(glm::radians(90.0f), aspect, 0.01f, 30000.f);
 
@@ -177,19 +190,80 @@ namespace st {
 
 
 						stRenderer.endSwapChainRenderpass(commandBuffer);
-						stRenderer.imageRenderBarrier(commandBuffer);
+						stRenderer.binImageComputeStartBarrier(commandBuffer);
 						simpleRender.computeHistogram(commandBuffer,stWindow.getExtent().width,stWindow.getExtent().height,StMaterialManager::getManager().getMaterialCount(), &globalDescriptorSets[frameIndex]);
-
+						stRenderer.binImageComputeEndBarrier(commandBuffer);
 
 						stRenderer.endFrame();
-						
+
 					}
 				}
 				if(shouldClose)break;
 			}
+			//read histogram here
+			vkDeviceWaitIdle(stDevice.device());
+			cell.histogramData.resize(StMaterialManager::getManager().getMaterialCount()*16);
+			memset(cell.histogramData.data(),0,sizeof(uint32_t)*cell.histogramData.size());
+			for (auto& histoBuf:histogramBuffer)
+			{
+				histoBuf->map();
+				uint32_t* data = (uint32_t*)histoBuf->getMappedMemory();
+				for (int i = 0;i<StMaterialManager::getManager().getMaterialCount()*16;i++)
+				{
+					cell.histogramData[i] += data[i];
+				}
+				memset(histoBuf->getMappedMemory(),0,histoBuf->getInstanceSize());
+				histoBuf->unmap();
+			}
+			// for (int i = 0;i<StMaterialManager::getManager().getMaterialCount();i++)
+			// {
+			//
+			// 	std::string name = StMaterialManager::getManager().getMaterialName(i);
+			// 	uint32_t* counts = &cell.histogramData[i*16];
+			// 	spdlog::info("Material {} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X} {:X}",
+			// 		name,
+			// 		counts[0],counts[1],counts[2],counts[3],
+			// 		counts[4],counts[5],counts[6],counts[7],
+			// 		counts[8],counts[9],counts[10],counts[11],
+			// 		counts[12],counts[13],counts[14],counts[15]);
+			// }
+
 			if(shouldClose)break;
 		}
 		vkDeviceWaitIdle(stDevice.device());
+		if (shouldClose)return;
+		for (auto& cell:cells)
+		{
+			if (cell.xIndex == 0 && cell.yIndex == 0)
+			{
+				struct PageData
+				{
+					std::string name;
+					int bin;
+					int cvg;
+				};
+				std::vector<PageData> pageData;
+				for (int i = 0;i < cell.histogramData.size();i++)
+				{
+					PageData page;
+					page.name = StMaterialManager::getManager().getMaterialName(i/16);
+					page.bin = i%16;
+					page.cvg = cell.histogramData[i];
+					pageData.push_back(page);
+				}
+				std::sort(pageData.begin(),pageData.end(),[](const PageData& a,const PageData& b)
+				{
+					return a.cvg>b.cvg;
+				});
+				for (auto& page:pageData)
+				{
+					if (!strncmp(page.name.c_str(),"TOOLS",5))continue;
+					if (!strncmp(page.name.c_str(),"WORLD\\DEV",9))continue;
+					printf("%-110s %2d %d\n",page.name.c_str(),page.bin,page.cvg);
+				}
+
+			}
+		}
 	}
 
 	

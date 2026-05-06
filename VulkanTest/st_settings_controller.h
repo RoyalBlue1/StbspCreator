@@ -23,7 +23,7 @@ namespace st {
 			kmeansNodeCount = 8;
 			kmeansIterations = 32;
 			cellSize = 128.f;
-			brushProbeGenerationGridSize = 8.f;
+			brushProbeGenerationGridSize = 16.f;
 			probeHeight = 64.f;
 			maxProbeZ = _mm_set1_ps(2000.f);
 		}

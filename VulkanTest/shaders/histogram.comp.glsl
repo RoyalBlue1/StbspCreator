@@ -20,7 +20,7 @@ layout(push_constant) uniform Push {
 } push;
 
 layout(binding = 1,r32ui)uniform readonly uimage2D bin;
-//layout(binding = 2,r32ui)uniform readonly uimage2D texId;
+
 layout (std430, binding = 2)buffer histograms{
 	uint g_histograms[];
 };
@@ -31,25 +31,34 @@ shared uint[MAX_MATERIAL_COUNT*MATERIAL_HISTOGRAM_BIN_COUNT] localHistogram;
 
 void main(){
 	
-	for (int i = 0; i < push.matCount * MATERIAL_HISTOGRAM_BIN_COUNT; i++) {
-		localHistogram[i] = 0u;
-	}
+	for (uint i = gl_LocalInvocationIndex; i < push.matCount * MATERIAL_HISTOGRAM_BIN_COUNT; i += gl_WorkGroupSize.x * gl_WorkGroupSize.y) {
+        localHistogram[i] = 0u;
+    }
 	barrier();
-	uint x_start = uint(gl_WorkGroupID.x) * 16u;
-	uint y_start = uint(gl_WorkGroupID.y) * 16u;
-	uint z_start = uint(gl_WorkGroupID.z);
-	for (uint x = x_start; x < x_start + 16u; x++) {
-		for (uint y = y_start; y < y_start + 16u; y++) {
-			uint bin_value = imageLoad(bin,ivec2(x,y)).r;
 
-			if(bin_value>(MAX_MATERIAL_COUNT*(z_start+1)*MATERIAL_HISTOGRAM_BIN_COUNT))continue;
-			if(bin_value<(MAX_MATERIAL_COUNT*z_start*MATERIAL_HISTOGRAM_BIN_COUNT))continue;
-			atomicAdd(localHistogram[bin_value-(MAX_MATERIAL_COUNT*z_start*MATERIAL_HISTOGRAM_BIN_COUNT)],1u);
-		}
-	}
+
+	uvec2 globalID = gl_GlobalInvocationID.xy;
+    uint z_start = uint(gl_WorkGroupID.z);
+    uint x = globalID.x;
+    uint y = globalID.y;
+    uint bin_value = imageLoad(bin,ivec2(x,y)).r;
+    if(bin_value<(MAX_MATERIAL_COUNT*(z_start+1)*MATERIAL_HISTOGRAM_BIN_COUNT)){
+        if(bin_value>(MAX_MATERIAL_COUNT*z_start*MATERIAL_HISTOGRAM_BIN_COUNT)){
+            atomicAdd(localHistogram[bin_value-(MAX_MATERIAL_COUNT*z_start*MATERIAL_HISTOGRAM_BIN_COUNT)],1u);
+        }
+    }
 	barrier();
-	for (int i = 0; i < push.matCount * MATERIAL_HISTOGRAM_BIN_COUNT; i++) {
-		if(localHistogram[i]==0)continue;
-		atomicAdd(g_histograms[i+(MAX_MATERIAL_COUNT*z_start*MATERIAL_HISTOGRAM_BIN_COUNT)],localHistogram[i]);
-	}
+
+    if(gl_LocalInvocationIndex == 0){
+
+
+        int localSize = int(MAX_MATERIAL_COUNT);
+        if(push.matCount < (MAX_MATERIAL_COUNT*(z_start+1)))
+        localSize = int(push.matCount%MAX_MATERIAL_COUNT);
+        for (int i = 0; i < localSize * MATERIAL_HISTOGRAM_BIN_COUNT; i++) {
+            if(localHistogram[i] == 0) continue;
+            atomicAdd(g_histograms[i + z_start*MAX_MATERIAL_COUNT*MATERIAL_HISTOGRAM_BIN_COUNT], localHistogram[i]);
+        }
+    }
+
 }

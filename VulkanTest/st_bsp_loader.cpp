@@ -7,7 +7,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
-#include <immintrin.h>
+#include <xmmintrin.h>
 
 #include "st_settings_controller.h"
 namespace st {
@@ -208,9 +208,9 @@ namespace st {
 		Mesh loadedMesh{};
 		for (auto& bspMesh : bspMeshes) {
 
-			if(bspMesh.meshFlags&((int)MeshFlags::TRIGGER|(int)MeshFlags::TRIGGER))continue;
+			//if(bspMesh.meshFlags&(int)MeshFlags::TRIGGER)continue;
 
-			if(bspMesh.meshFlags&TRANSLUCENT)continue;
+			//if(bspMesh.meshFlags&(int)MeshFlags::TRANSLUCENT)continue;
 			
 			uint32_t vertexOffset = materialSorts[bspMesh.material_sort].vertexOffset;
 			uint32_t vertexOffset2 = bspMesh.first_vertex;
@@ -290,7 +290,7 @@ namespace st {
 		int modelNameCount,leafCount,propCount;
 		modelNameCount = *(int*)&gameLump[readPtr];
 		readPtr+=4;
-		fs::path modelBase = fileName.remove_filename();
+		fs::path modelBase = fileName.parent_path();
 		if (!fs::exists(modelBase/"models"))
 		{
 			modelBase = modelBase.parent_path();
@@ -460,6 +460,8 @@ namespace st {
 
 		int xId = (int)floorf(x / grid.cellSize) - grid.cellOrg[0];
 		int yId = (int)floorf(y / grid.cellSize) - grid.cellOrg[1];
+		if (xId>=grid.cellCount[0])return true;
+		if (yId>=grid.cellCount[1])return true;
 		GridCell& cell = gridCells[yId*grid.cellCount[0]+xId];
 		for (int i = 0; i < cell.geoSetCount; i++) {
 			GeoSet& geoSet = geoSets[cell.geoSetStart + i];
