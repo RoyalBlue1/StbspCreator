@@ -13,7 +13,7 @@ typedef glm::vec3 Vector3;
 
 typedef unsigned char BYTE;
 typedef unsigned short WORD;
-typedef unsigned int DWORD;
+//typedef unsigned int DWORD;
 
 enum LumpIds {
     ENTITIES = 0x0000,
