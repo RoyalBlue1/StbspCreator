@@ -120,6 +120,48 @@ inline float minDistanceSqrBetweenLineSegments(__m128 p1, __m128 q1,__m128 p2,__
 
 }
 
+inline __m128 closestPtPointTriangle(__m128 p, __m128 a, __m128 b, __m128 c)
+{
+	__m128 ab = _mm_sub_ps(b, a);
+	__m128 ac = _mm_sub_ps(c, a);
+	__m128 ap = _mm_sub_ps(p, a);
+	float d1 = _mm_cvtss_f32(dotProduct_ps(ab, ap));
+	float d2 = _mm_cvtss_f32(dotProduct_ps(ac, ap));
+	if (d1 <= 0.f && d2 <= 0.f)
+		return a;
+	__m128 bp = _mm_sub_ps(p, b);
+	float d3 = _mm_cvtss_f32(dotProduct_ps(ab, bp));
+	float d4 = _mm_cvtss_f32(dotProduct_ps(ac, bp));
+	if (d3 >= 0.f && d4 <= d3)
+		return b;
+	__m128 cp = _mm_sub_ps(p, c);
+	float d5 = _mm_cvtss_f32(dotProduct_ps(ab, cp));
+	float d6 = _mm_cvtss_f32(dotProduct_ps(ac, cp));
+	if (d6 >= 0.f && d5 <= d6)
+		return c;
+	float vc = d1 * d4 - d3 * d2;
+	if (vc <= 0.f && d1 >= 0.f && d3 <= 0.f)
+	{
+		float v = d1 / (d1 - d3);
+		return _mm_add_ps(a, _mm_mul_ps(ab, _mm_set1_ps(v)));
+	}
+	float vb = d5 * d2 - d1 * d6;
+	if (vb <= 0.f && d2 >= 0.f && d6 <= 0.f)
+	{
+		float w = d2 / (d2 - d6);
+		return _mm_add_ps(a, _mm_mul_ps(ac, _mm_set1_ps(w)));
+	}
+	float va = d3 * d6 - d5 * d4;
+	if (va <= 0.f && (d4 - d3) >= 0.f && (d5 - d6) >= 0.f)
+	{
+		float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+		return _mm_add_ps(b, _mm_mul_ps(_mm_sub_ps(c, b), _mm_set1_ps(w)));
+	}
+	float denom = 1.f / (va + vb + vc);
+	float v = vb * denom;
+	float w = vc * denom;
+	return _mm_add_ps(a, _mm_add_ps(_mm_mul_ps(ab, _mm_set1_ps(v)), _mm_mul_ps(ac, _mm_set1_ps(w))));
+}
 
 inline float minDistanceSqrTriangleVsLineSegment(__m128 a,__m128 b,__m128 c,__m128 p,__m128 q)
 {
@@ -214,5 +256,4 @@ inline __m128 loadVector3(Vector3* vec) {
 	{
 		return _mm_set_ps(0, vec->z, vec->y, vec->x);
 	}
-
 }
